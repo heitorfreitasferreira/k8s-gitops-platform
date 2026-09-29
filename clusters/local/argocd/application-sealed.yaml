@@ -11,9 +11,9 @@ metadata:
 spec:
   project: todolist
   source:
-    repoURL: https://github.com/heitorfreitasferreira/cesar-challenge.git
+    repoURL: https://github.com/heitorfreitasferreira/k8s-gitops-platform.git
     targetRevision: main
-    path: clusters/desafio/sealed-secrets
+    path: clusters/local/sealed-secrets
   destination:
     server: https://kubernetes.default.svc
     namespace: kube-system

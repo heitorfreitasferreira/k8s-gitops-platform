@@ -9,9 +9,9 @@ metadata:
 spec:
   project: observability
   source:
-    repoURL: https://github.com/heitorfreitasferreira/cesar-challenge.git
+    repoURL: https://github.com/heitorfreitasferreira/k8s-gitops-platform.git
     targetRevision: main
-    path: clusters/desafio/observability
+    path: clusters/local/observability
   destination:
     server: https://kubernetes.default.svc
     namespace: observability

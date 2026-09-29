@@ -6,7 +6,7 @@ metadata:
 spec:
   project: todolist
   source:
-    repoURL: https://github.com/heitorfreitasferreira/cesar-challenge.git
+    repoURL: https://github.com/heitorfreitasferreira/k8s-gitops-platform.git
     targetRevision: main
     path: k8s/overlays/production
   destination:

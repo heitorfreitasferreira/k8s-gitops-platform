@@ -4,9 +4,9 @@ metadata:
   name: todolist
   namespace: argocd
 spec:
-  description: Desafio platform — todolist (staging + production)
+  description: GitOps platform: todolist (staging + production)
   sourceRepos:
-    - https://github.com/heitorfreitasferreira/cesar-challenge.git
+    - https://github.com/heitorfreitasferreira/k8s-gitops-platform.git
   destinations:
     - server: https://kubernetes.default.svc
       namespace: todolist-staging

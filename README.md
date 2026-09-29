@@ -1,19 +1,19 @@
-# cesar-challenge — repo GitOps (ENTREGAVEL)
+# k8s-gitops-platform
 
-Fonte de verdade do deploy da todolist-app no cluster `desafio` (k3d local).
-Padrao GitOps: manifests finais aqui, CI no repo da app,
-Argo CD reconcilia Git -> cluster. Digest imutavel versionado aqui; o repo
-da app nao e segunda fonte de verdade.
+Manifests GitOps e bootstrap do cluster definido em codigo para uma plataforma
+Kubernetes local que roda a todolist-app. O Argo CD reconcilia o Git no cluster;
+o digest imutavel da imagem fica versionado aqui e o repo da app nao e segunda
+fonte de verdade.
 
-## Como o desafio e atendido (R1–R5)
+## O que a plataforma entrega
 
-| Req | Como |
+| Area | Como |
 |---|---|
-| **R1** Provisionamento automatizado | Cluster k3d por codigo (`clusters/desafio/k3d-config.yaml`); Argo CD, controller de secrets e apps aplicados por `bootstrap.sh` (1 comando, repetivel, sem console). Infra de observabilidade via Helm charts pinados. |
-| **R2** Deploy automatizado | `git push` no repo da app -> CI (test + build GHCR) -> bump de digest no overlay -> Argo CD sincroniza. Nada manual. |
-| **R3** Acesso externo | Ingress (Traefik) no LB `127.0.0.1:80/443`, por host: staging/production/argocd/grafana. |
-| **R4** Escalabilidade e resiliencia | 2 replicas + HPA (2..5) + PDB + probes separadas (liveness `/livez`, readiness `/healthz`) + rolling update `maxUnavailable: 0` + requests/limits. |
-| **R5** Documentacao | Este README, `DECISIONS.md` (escolhas/descartes/desafios), `evidencias/` (logs/estado) e screenshots. |
+| Provisionamento | Cluster k3d definido em codigo (`clusters/local/k3d-config.yaml`); Argo CD, controller de secrets e apps aplicados por `bootstrap.sh` (um comando, repetivel, sem console). Observabilidade via Helm charts pinados. |
+| Deploy continuo | `git push` no repo da app -> CI (test + build GHCR) -> bump de digest no overlay -> Argo CD sincroniza. Sem passo manual. |
+| Acesso externo | Ingress (Traefik) no LB `127.0.0.1:80/443`, por host: staging/production/argocd/grafana. |
+| Escalabilidade e resiliencia | 2 replicas + HPA (2..5) + PDB + probes separadas (liveness `/livez`, readiness `/healthz`) + rolling update `maxUnavailable: 0` + requests/limits. |
+| Documentacao | Este README, `DECISIONS.md` (escolhas e descartes) e `evidencias/` (logs e screenshots de execucoes). |
 
 ## Arquitetura
 
@@ -22,11 +22,11 @@ da app nao e segunda fonte de verdade.
   todolist-app ──────────────────────────────► GitHub Actions (test -> build GHCR)
    (codigo+CI)                                          │ bump de digest (kustomize)
                                                         ▼
-  cesar-challenge (GitOps)  ◄───────────────────────────┘
+  k8s-gitops-platform (GitOps)  ◄───────────────────────────┘
    k8s/base + overlays/ + clusters/
         │  Argo CD reconcilia
         ▼
-   k3d cluster "desafio" ── Traefik (127.0.0.1:80/443)
+   k3d cluster "local" ── Traefik (127.0.0.1:80/443)
         ├── todolist-staging      (auto-sync)
         ├── todolist-production   (sync manual = promocao)
         └── observability         (Prometheus/Grafana/Loki/Alloy)
@@ -75,17 +75,17 @@ Stack entregue via Argo CD (Helm charts pinados), tudo em `observability`:
 
 ## O que esta onde
 
-| Caminho | Papel (requisito) |
+| Caminho | Papel |
 |---|---|
-| `clusters/desafio/k3d-config.yaml` | R1: cluster criado por codigo |
-| `clusters/desafio/argocd/` | R1: install + projects + applications do Argo CD |
-| `clusters/desafio/argocd/argocd-ui-ingress.yaml` | Bonus: UI do Argo no Ingress |
-| `clusters/desafio/sealed-secrets/` | controller Sealed Secrets (vendorizado, digest pinado) + cert publico |
-| `clusters/desafio/observability/` | ServiceMonitors, dashboards e secret do Grafana |
-| `k8s/base + k8s/overlays/staging|production/` | R2/R4: manifests da app (fonte unica — nao duplicar no fork) |
+| `clusters/local/k3d-config.yaml` | cluster criado por codigo |
+| `clusters/local/argocd/` | install + projects + applications do Argo CD |
+| `clusters/local/argocd/argocd-ui-ingress.yaml` | UI do Argo no Ingress |
+| `clusters/local/sealed-secrets/` | controller Sealed Secrets (vendorizado, digest pinado) + cert publico |
+| `clusters/local/observability/` | ServiceMonitors, dashboards e secret do Grafana |
+| `k8s/base + k8s/overlays/staging|production/` | manifests da app (fonte unica: nao duplicar no fork) |
 | `envs/*.env.example` | modelo tangivel dos secrets (o `.env` preenchido nunca e commitado) |
-| `../todolist-app/.github/workflows/` | R2: CI por branch (staging->overlay staging, production->production) |
-| `evidencias/` | R5: logs, dumps, prints de navegador |
+| `../todolist-app/.github/workflows/` | CI por branch (staging->overlay staging, production->production) |
+| `evidencias/` | logs, dumps e prints de navegador |
 
 ## Fluxo de branches (GitLab Flow, no repo da app)
 
@@ -143,7 +143,7 @@ Obrigatórios para o `bootstrap.sh`: `k3d`, `kubectl` e `kubeseal`.
    `todolist-app/.github/workflows/ci.yaml` e o nome da imagem nos overlays
    (`k8s/overlays/*/kustomization.yaml`).
 2. **Secret `GITOPS_BUMP_TOKEN`** no repo do app: um *fine-grained PAT* com
-   **Contents: read+write** no repo `cesar-challenge`. É com ele que o job de
+   **Contents: read+write** no repo `k8s-gitops-platform`. É com ele que o job de
    bump commita o digest da imagem aqui. Se expirar, a CI falha fechado.
 3. **SSH no GitHub** (`ssh -T git@github.com` ok) — o caminho `--reseal` do
    `bootstrap.sh` dá `push` neste repo.
@@ -157,7 +157,7 @@ Obrigatórios para o `bootstrap.sh`: `k3d`, `kubectl` e `kubeseal`.
 - Recursos: o stack sobe ~25 pods — reserve **4 vCPU / 6–8 GiB** livres para o Docker.
 - Portas livres em loopback: **6444** (API), **80 e 443** (LB):
   `ss -tlnp | grep -E ':(80|443|6444)\b'` deve sair vazio.
-- `KUBECONFIG` isolado: `export KUBECONFIG=~/.kube/desafio-k3d.kubeconfig`
+- `KUBECONFIG` isolado: `export KUBECONFIG=~/.kube/local-k3d.kubeconfig`
   (nunca toque em `~/.kube/config`).
 
 ## Reproducao (do zero)
@@ -165,7 +165,7 @@ Obrigatórios para o `bootstrap.sh`: `k3d`, `kubectl` e `kubeseal`.
 Forma curta (recomendada) — um comando, repete do zero:
 
 ```bash
-export KUBECONFIG=~/.kube/desafio-k3d.kubeconfig
+export KUBECONFIG=~/.kube/local-k3d.kubeconfig
 ./bootstrap.sh                 # cluster -> Argo -> secrets -> apps -> espera Synced/Healthy
 # ./bootstrap.sh --reseal       # forca re-selar os secrets com o cert atual
 # ./bootstrap.sh teardown       # derruba o cluster
@@ -179,20 +179,20 @@ e **re-sela**, commitando o resultado (o Argo le do Git).
 <details><summary>Passo a passo manual (equivalente)</summary>
 
 ```bash
-k3d cluster create --config clusters/desafio/k3d-config.yaml
-kubectl apply -f clusters/desafio/argocd/namespace.yaml
-kubectl apply -n argocd -f clusters/desafio/argocd/install.yaml
+k3d cluster create --config clusters/local/k3d-config.yaml
+kubectl apply -f clusters/local/argocd/namespace.yaml
+kubectl apply -n argocd -f clusters/local/argocd/install.yaml
 kubectl -n argocd rollout status deployment/argocd-server
 kubectl -n argocd patch deployment argocd-server --type=json \
-  --patch-file clusters/desafio/argocd/argocd-server-insecure.patch.json
-kubectl apply -f clusters/desafio/argocd/argocd-ui-ingress.yaml
-kubectl apply -f clusters/desafio/argocd/project.yaml
-kubectl apply -f clusters/desafio/argocd/project-observability.yaml
-kubectl apply -f clusters/desafio/argocd/application-sealed.yaml
+  --patch-file clusters/local/argocd/argocd-server-insecure.patch.json
+kubectl apply -f clusters/local/argocd/argocd-ui-ingress.yaml
+kubectl apply -f clusters/local/argocd/project.yaml
+kubectl apply -f clusters/local/argocd/project-observability.yaml
+kubectl apply -f clusters/local/argocd/application-sealed.yaml
 kubectl -n kube-system rollout status deployment/sealed-secrets-controller
 # ... secrets (ver bootstrap.sh) ...
 for app in staging production kube-prometheus-stack loki alloy observability; do
-  kubectl apply -f clusters/desafio/argocd/application-$app.yaml
+  kubectl apply -f clusters/local/argocd/application-$app.yaml
 done
 kubectl -n argocd get applications
 ```
@@ -201,7 +201,7 @@ kubectl -n argocd get applications
 Novo deploy: `git push` em `staging`/`production` no fork `todolist-app`
 dispara a CI (test -> build -> GHCR -> bump de digest no overlay certo -> Argo sync).
 
-## Desafios encontrados no caminho
+## Problemas encontrados no caminho
 
 Registrados em detalhe no `DECISIONS.md`; os principais:
 

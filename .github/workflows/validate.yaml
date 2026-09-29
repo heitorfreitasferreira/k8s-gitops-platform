@@ -36,7 +36,7 @@ jobs:
 
       - name: Build + validacao de schema dos overlays
         run: |
-          for path in k8s/overlays/staging k8s/overlays/production clusters/desafio/observability; do
+          for path in k8s/overlays/staging k8s/overlays/production clusters/local/observability; do
             echo "== $path =="
             kustomize build "$path" | kubeconform -strict -summary -ignore-missing-schemas
           done

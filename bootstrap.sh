@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ABOUTME: Bootstrap do cluster desafio (R1): cluster + Argo + secrets + apps.
+# ABOUTME: Bootstrap do cluster local: cluster + Argo + secrets + apps.
 # ABOUTME: Repetivel e sem passos manuais no console. Uso: ./bootstrap.sh [--reseal]
 #
 # Fluxo:
@@ -13,11 +13,11 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export KUBECONFIG="${HOME}/.kube/desafio-k3d.kubeconfig"   # isolado (AGENTS.md)
-CLUSTER="desafio"
+export KUBECONFIG="${HOME}/.kube/local-k3d.kubeconfig"   # isolado (AGENTS.md)
+CLUSTER="local"
 ARGOCD_NS="argocd"
 SEALED_NS="kube-system"
-CERT="${ROOT}/clusters/desafio/sealed-secrets/cert.pem"
+CERT="${ROOT}/clusters/local/sealed-secrets/cert.pem"
 BACKUP="${ROOT}/sealed-backup/key.yaml"
 RESEAL=0
 [[ "${1:-}" == "--reseal" ]] && RESEAL=1
@@ -44,7 +44,7 @@ create_cluster() {
     log "cluster '${CLUSTER}' ja existe — reaproveitando"
   else
     log "criando cluster '${CLUSTER}' a partir do k3d-config.yaml"
-    k3d cluster create --config "${ROOT}/clusters/desafio/k3d-config.yaml"
+    k3d cluster create --config "${ROOT}/clusters/local/k3d-config.yaml"
   fi
   kubectl wait --for=condition=Ready nodes --all --timeout=180s
 }
@@ -61,16 +61,16 @@ wait_for_controller() {
 
 install_argocd() {
   log "instalando Argo CD"
-  kubectl apply -f "${ROOT}/clusters/desafio/argocd/namespace.yaml"
-  kubectl apply -n "${ARGOCD_NS}" -f "${ROOT}/clusters/desafio/argocd/install.yaml"
+  kubectl apply -f "${ROOT}/clusters/local/argocd/namespace.yaml"
+  kubectl apply -n "${ARGOCD_NS}" -f "${ROOT}/clusters/local/argocd/install.yaml"
   kubectl -n "${ARGOCD_NS}" rollout status deployment/argocd-server --timeout=300s
   kubectl -n "${ARGOCD_NS}" rollout status statefulset/argocd-application-controller --timeout=300s
   kubectl -n "${ARGOCD_NS}" rollout status deployment/argocd-repo-server --timeout=300s
 
   # UI via Ingress (bonus): argocd-server em --insecure + Ingress no Traefik.
   kubectl -n "${ARGOCD_NS}" patch deployment argocd-server --type=json \
-    --patch-file "${ROOT}/clusters/desafio/argocd/argocd-server-insecure.patch.json" >/dev/null 2>&1 || true
-  kubectl apply -f "${ROOT}/clusters/desafio/argocd/argocd-ui-ingress.yaml"
+    --patch-file "${ROOT}/clusters/local/argocd/argocd-server-insecure.patch.json" >/dev/null 2>&1 || true
+  kubectl apply -f "${ROOT}/clusters/local/argocd/argocd-ui-ingress.yaml"
 }
 
 persist_argocd_credentials() {
@@ -157,11 +157,11 @@ resolve_secrets() {
   seal "${ROOT}/envs/staging.env"             todolist-staging    todolist-auth        "${ROOT}/k8s/overlays/staging/sealed-auth.yaml"
   seal "${ROOT}/envs/postgres-production.env" todolist-production postgres-credentials "${ROOT}/k8s/overlays/production/sealed-postgres.yaml"
   seal "${ROOT}/envs/production.env"          todolist-production todolist-auth        "${ROOT}/k8s/overlays/production/sealed-auth.yaml"
-  seal "${ROOT}/envs/grafana-observability.env" observability     grafana-admin        "${ROOT}/clusters/desafio/observability/sealed-grafana-admin.yaml"
+  seal "${ROOT}/envs/grafana-observability.env" observability     grafana-admin        "${ROOT}/clusters/local/observability/sealed-grafana-admin.yaml"
 
-  if ! git -C "$ROOT" diff --quiet -- 'k8s/overlays/*/sealed-*.yaml' 'clusters/desafio/observability/sealed-*.yaml'; then
+  if ! git -C "$ROOT" diff --quiet -- 'k8s/overlays/*/sealed-*.yaml' 'clusters/local/observability/sealed-*.yaml'; then
     log "commitando os selos re-gerados (o Argo le do Git)"
-    git -C "$ROOT" add 'k8s/overlays/*/sealed-*.yaml' 'clusters/desafio/observability/sealed-*.yaml'
+    git -C "$ROOT" add 'k8s/overlays/*/sealed-*.yaml' 'clusters/local/observability/sealed-*.yaml'
     git -C "$ROOT" commit -m "chore: reseal secrets ($(date +%F))"
     if [[ "${NO_PUSH:-0}" == "0" ]]; then
       git -C "$ROOT" pull --rebase origin main && git -C "$ROOT" push origin main
@@ -188,13 +188,13 @@ seal() { # envfile namespace name output
 
 apply_platform() {
   log "aplicando projetos e Applications"
-  kubectl apply -f "${ROOT}/clusters/desafio/argocd/project.yaml"
-  kubectl apply -f "${ROOT}/clusters/desafio/argocd/project-observability.yaml"
+  kubectl apply -f "${ROOT}/clusters/local/argocd/project.yaml"
+  kubectl apply -f "${ROOT}/clusters/local/argocd/project-observability.yaml"
   for app in \
     application-sealed \
     application-staging application-production \
     application-kube-prometheus-stack application-loki application-alloy application-observability ; do
-    kubectl apply -f "${ROOT}/clusters/desafio/argocd/${app}.yaml"
+    kubectl apply -f "${ROOT}/clusters/local/argocd/${app}.yaml"
   done
   # Provisionamento INICIAL: sincroniza production uma vez para o ambiente
   # ficar pronto. Promocoes seguintes continuam manuais (de proposito).
@@ -259,9 +259,9 @@ main() {
   install_argocd
   persist_argocd_credentials
   # Projetos ANTES das Applications (o Application valida o AppProject ja na spec).
-  kubectl apply -f "${ROOT}/clusters/desafio/argocd/project.yaml"
-  kubectl apply -f "${ROOT}/clusters/desafio/argocd/project-observability.yaml"
-  kubectl apply -f "${ROOT}/clusters/desafio/argocd/application-sealed.yaml"
+  kubectl apply -f "${ROOT}/clusters/local/argocd/project.yaml"
+  kubectl apply -f "${ROOT}/clusters/local/argocd/project-observability.yaml"
+  kubectl apply -f "${ROOT}/clusters/local/argocd/application-sealed.yaml"
   wait_for_controller
   resolve_secrets
   apply_platform

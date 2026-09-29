@@ -1,4 +1,4 @@
-# R1: ArgoCD instalado por codigo (manifest remoto versionado por URL + versao).
+# ArgoCD instalado por codigo (manifest remoto versionado por URL + versao).
 # Reproducao: kubectl apply -n argocd -f install.yaml && kubectl apply -f projects/ applications/
 apiVersion: v1
 kind: Namespace

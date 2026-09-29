@@ -1,22 +1,22 @@
-# DECISIONS.md — log flat de decisoes (R5)
+# DECISIONS.md — log de decisoes
 
 Formato: data + contexto + escolha + descarte. Sem cerimonia de ADR (1 decisao = 1 item).
 
-- 2026-09-09 · k3d para o cluster. Contexto: Desafio permite
-  local. Escolha: k3d (k3s em Docker, descartavel em 1 comando). Descarte: kind (nao e k3s),
+- 2026-09-09 · k3d para o cluster. Contexto: o ambiente e local, descartavel.
+  Escolha: k3d (k3s em Docker, descartavel em 1 comando). Descarte: kind (nao e k3s),
   minikube (sujaria ~/.minikube), cloud (custo + conta pessoal).
 - 2026-09-09 · 2 repos (opcao A). Contexto: separar CI (app) de CD (GitOps).
-  Escolha: fork `todolist-app` (codigo + workflow) + `cesar-challenge` (manifests + Argo CD).
+  Escolha: fork `todolist-app` (codigo + workflow) + `k8s-gitops-platform` (manifests + Argo CD).
   Descarte: monorepo (misturaria CI com fonte de deploy).
-- 2026-09-09 · Manifests em fonte unica. Contexto: council J2 apontou risco de drift.
-  Escolha: `k8s/` SOMENTE em `cesar-challenge`; fork sem `k8s/`. CI faz bump de digest aqui.
+- 2026-09-09 · Manifests em fonte unica. Contexto: evitar drift entre os dois repos.
+  Escolha: `k8s/` SOMENTE em `k8s-gitops-platform`; fork sem `k8s/`. CI faz bump de digest aqui.
 - 2026-09-09 · Postgres simples junto no k3d. Contexto: validar SELECT/health sem HA.
   Escolha: Deployment + Service + PVC (sem replicas). Descarte: StatefulSet/HA, Postgres externo.
 - 2026-09-09 · Argo CD fonte de verdade. Escolha: Applications apontam para
   `k8s/overlays/staging` (sync automatico) e `k8s/overlays/production`
   (sync manual = promocao); imagem por digest imutavel (`@sha256:`), nunca `:latest`.
-- 2026-09-09 · `.opencode/` fora do entregavel. Contexto: IA encorajada mas avaliador
-  grade README/DECISIONS/evidencias. Escolha: MCPs e comandos ficam no workspace local.
+- 2026-09-09 · `.opencode/` fora do repo. Contexto: MCPs e comandos sao locais
+  e nao pertencem ao que e versionado. Escolha: ficam no workspace local, fora do Git.
 - 2026-09-09 · Digest com prefixo `sha256:` (fix). Contexto: primeiro bump gerou
   `InvalidImageName` (CI arrancava o prefixo). Escolha: kustomize exige
   `digest: sha256:<hex>`; workflow corrigido e validado pelo proprio loop CI->ArgoCD.
@@ -68,7 +68,7 @@ Formato: data + contexto + escolha + descarte. Sem cerimonia de ADR (1 decisao =
 - 2026-09-11 · Dashboard do Postgres: grafana.com #9628 (template pronto),
   transformado (datasource `Prometheus`, `__inputs` removidos) e versionado.
 - 2026-09-11 · Argo CD UI via Ingress no mesmo LB (bonus). Contexto: port-forward
-  nao e entregavel. Escolha: Ingress + `argocd-server --insecure` (TLS terminaria
+  nao serve como acesso permanente. Escolha: Ingress + `argocd-server --insecure` (TLS terminaria
   no LB em ambiente real); patch JSON versionado. Descarte: ServersTransport do
   Traefik (nao surtiu efeito nesta versao do k3s).
 - 2026-09-11 · production: PR obrigatorio com 0 approvals. Contexto: repo de uma
@@ -107,7 +107,7 @@ Formato: data + contexto + escolha + descarte. Sem cerimonia de ADR (1 decisao =
   modelo usava `threshold` com `expression` apontando para si ("cannot reference
   itself"); corrigido para reduce(last) + math `$B > 0`.
 - 2026-09-11 · Alloy descarta kube-system/kube-public/kube-node-lease/argocd.
-  Contexto: volume e ruido sem valor para o desafio; mantem observability para
+  Contexto: volume e ruido sem valor para a demo; mantem observability para
   depurar a propria stack. Retencao Loki: 72h.
 - 2026-09-11 · Liveness `/livez` separada de readiness `/healthz`. Contexto: as
   duas usavam `/healthz` (que consulta o banco); queda do Postgres reiniciava o
@@ -166,6 +166,6 @@ Formato: data + contexto + escolha + descarte. Sem cerimonia de ADR (1 decisao =
   o plugin e que nao).
 - 2026-09-11 · Repo da app so com `staging` (default) + `production` (protegida).
   Contexto: a `main` do fork era vestigial no GitLab Flow (o CI usa staging/
-  production e o bump aponta para a main do cesar-challenge, nao do app).
+  production e o bump aponta para a main do k8s-gitops-platform, nao do app).
   Escolha: remover a `main` (ancestral de staging, sem perda de historico).
   Descarte: manter as 3 branches (ambiguidade sobre a principal).

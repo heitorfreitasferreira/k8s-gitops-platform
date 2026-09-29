@@ -6,7 +6,7 @@ metadata:
 spec:
   description: Observabilidade (kube-prometheus-stack + Loki + Alloy)
   sourceRepos:
-    - https://github.com/heitorfreitasferreira/cesar-challenge.git
+    - https://github.com/heitorfreitasferreira/k8s-gitops-platform.git
     - https://prometheus-community.github.io/helm-charts
     - https://grafana.github.io/helm-charts
   destinations:
