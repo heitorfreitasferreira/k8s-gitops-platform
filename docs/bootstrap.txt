@@ -1,51 +1,51 @@
-~/desafio-platform ❯ ./cesar-challenge/bootstrap.sh teardown
+~/gitops-platform ❯ ./k8s-gitops-platform/bootstrap.sh teardown
 ==> teardown
-INFO[0000] Deleting cluster 'desafio'
-INFO[0004] Deleting cluster network 'k3d-desafio'
+INFO[0000] Deleting cluster 'local'
+INFO[0004] Deleting cluster network 'k3d-local'
 INFO[0004] Deleting 1 attached volumes...
 INFO[0004] Removing cluster details from default kubeconfig...
 INFO[0004] Removing standalone kubeconfig file (if there is one)...
-INFO[0004] Successfully deleted cluster desafio!
+INFO[0004] Successfully deleted cluster local!
 [!] prune global pulado (use PRUNE=1 se quiser limpar volumes/redes orfaos)
 [!] repos e backup de chave NAO foram removidos (remocao manual se desejado)
 
-~/desafio-platform ❯ ./cesar-challenge/bootstrap.sh teardown PRUNE=1
+~/gitops-platform ❯ ./k8s-gitops-platform/bootstrap.sh teardown PRUNE=1
 ==> teardown
-INFO[0000] No nodes found for cluster 'desafio', nothing to delete.
+INFO[0000] No nodes found for cluster 'local', nothing to delete.
 INFO[0000] No clusters found
 [!] prune global pulado (use PRUNE=1 se quiser limpar volumes/redes orfaos)
 [!] repos e backup de chave NAO foram removidos (remocao manual se desejado)
 
-~/desafio-platform ❯ ./cesar-challenge/bootstrap.sh
+~/gitops-platform ❯ ./k8s-gitops-platform/bootstrap.sh
 ==> preflight: ferramentas
 ==> preflight: portas livres (6444, 80, 443)
-==> criando cluster 'desafio' a partir do k3d-config.yaml
-INFO[0000] Using config file /home/heitor/desafio-platform/cesar-challenge/clusters/desafio/k3d-config.yaml (k3d.io/v1alpha5#simple)
+==> criando cluster 'local' a partir do k3d-config.yaml
+INFO[0000] Using config file /home/heitor/gitops-platform/k8s-gitops-platform/clusters/local/k3d-config.yaml (k3d.io/v1alpha5#simple)
 INFO[0000] portmapping '127.0.0.1:80:80' targets the loadbalancer: defaulting to [servers:*:proxy agents:*:proxy]
 INFO[0000] portmapping '127.0.0.1:443:443' targets the loadbalancer: defaulting to [servers:*:proxy agents:*:proxy]
 INFO[0000] Prep: Network
-INFO[0000] Created network 'k3d-desafio'
-INFO[0000] Created image volume k3d-desafio-images
+INFO[0000] Created network 'k3d-local'
+INFO[0000] Created image volume k3d-local-images
 INFO[0000] Starting new tools node...
-INFO[0001] Creating node 'k3d-desafio-server-0'
-INFO[0005] Creating node 'k3d-desafio-agent-0'
-INFO[0005] Starting node 'k3d-desafio-tools'
-INFO[0007] Creating LoadBalancer 'k3d-desafio-serverlb'
+INFO[0001] Creating node 'k3d-local-server-0'
+INFO[0005] Creating node 'k3d-local-agent-0'
+INFO[0005] Starting node 'k3d-local-tools'
+INFO[0007] Creating LoadBalancer 'k3d-local-serverlb'
 INFO[0008] Using the k3d-tools node to gather environment information
 INFO[0009] HostIP: using network gateway 172.20.0.1 address
-INFO[0009] Starting cluster 'desafio'
+INFO[0009] Starting cluster 'local'
 INFO[0009] Starting servers...
-INFO[0010] Starting node 'k3d-desafio-server-0'
+INFO[0010] Starting node 'k3d-local-server-0'
 INFO[0014] Starting agents...
-INFO[0014] Starting node 'k3d-desafio-agent-0'
+INFO[0014] Starting node 'k3d-local-agent-0'
 INFO[0025] Starting helpers...
-INFO[0025] Starting node 'k3d-desafio-serverlb'
+INFO[0025] Starting node 'k3d-local-serverlb'
 INFO[0031] Injecting records for hostAliases (incl. host.k3d.internal) and for 3 network members into CoreDNS configmap...
-INFO[0033] Cluster 'desafio' created successfully!
+INFO[0033] Cluster 'local' created successfully!
 INFO[0033] You can now use it like this:
 kubectl cluster-info
-node/k3d-desafio-agent-0 condition met
-node/k3d-desafio-server-0 condition met
+node/k3d-local-agent-0 condition met
+node/k3d-local-server-0 condition met
 ==> instalando Argo CD
 namespace/argocd created
 customresourcedefinition.apiextensions.k8s.io/applications.argoproj.io created
@@ -156,4 +156,4 @@ Pronto. Acesso (LB 127.0.0.1:80/443; hosts *.localhost):
   Argo CD UI   http://argocd.localhost      (admin / -9gk4G35vw3pPHls)
   Grafana      http://grafana.localhost     (admin / bc174c1fe5f5be3be76db44d)
 
-~/desafio-platform ❯
+~/gitops-platform ❯

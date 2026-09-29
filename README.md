@@ -13,7 +13,7 @@ fonte de verdade.
 | Deploy continuo | `git push` no repo da app -> CI (test + build GHCR) -> bump de digest no overlay -> Argo CD sincroniza. Sem passo manual. |
 | Acesso externo | Ingress (Traefik) no LB `127.0.0.1:80/443`, por host: staging/production/argocd/grafana. |
 | Escalabilidade e resiliencia | 2 replicas + HPA (2..5) + PDB + probes separadas (liveness `/livez`, readiness `/healthz`) + rolling update `maxUnavailable: 0` + requests/limits. |
-| Documentacao | Este README, `DECISIONS.md` (escolhas e descartes) e `evidencias/` (logs e screenshots de execucoes). |
+| Documentacao | Este README, `DECISIONS.md` (escolhas e descartes) e `docs/` (logs e screenshots de execucoes). |
 
 ## Arquitetura
 
@@ -85,7 +85,7 @@ Stack entregue via Argo CD (Helm charts pinados), tudo em `observability`:
 | `k8s/base + k8s/overlays/staging|production/` | manifests da app (fonte unica: nao duplicar no fork) |
 | `envs/*.env.example` | modelo tangivel dos secrets (o `.env` preenchido nunca e commitado) |
 | `../todolist-app/.github/workflows/` | CI por branch (staging->overlay staging, production->production) |
-| `evidencias/` | logs, dumps e prints de navegador |
+| `docs/` | logs, dumps e prints de navegador |
 
 ## Fluxo de branches (GitLab Flow, no repo da app)
 

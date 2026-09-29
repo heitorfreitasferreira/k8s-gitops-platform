@@ -48,15 +48,15 @@ cronjob.batch/todolist-cleanup   */5 * * * *   <none>     False     0        118
 
 === pods ===
 NAME                              READY   STATUS      RESTARTS   AGE     IP           NODE                   NOMINATED NODE   READINESS GATES
-postgres-9bdddfcf5-df49l          1/1     Running     0          10m     10.42.0.21   k3d-desafio-server-0   <none>           <none>
-todolist-cleanup-29816505-6q8mw   0/1     Completed   0          118s    10.42.0.26   k3d-desafio-server-0   <none>           <none>
-todolist-d894f88f8-plz62          1/1     Running     0          4m42s   10.42.0.22   k3d-desafio-server-0   <none>           <none>
-todolist-d894f88f8-stt8p          1/1     Running     0          4m26s   10.42.1.18   k3d-desafio-agent-0    <none>           <none>
+postgres-9bdddfcf5-df49l          1/1     Running     0          10m     10.42.0.21   k3d-local-server-0   <none>           <none>
+todolist-cleanup-29816505-6q8mw   0/1     Completed   0          118s    10.42.0.26   k3d-local-server-0   <none>           <none>
+todolist-d894f88f8-plz62          1/1     Running     0          4m42s   10.42.0.22   k3d-local-server-0   <none>           <none>
+todolist-d894f88f8-stt8p          1/1     Running     0          4m26s   10.42.1.18   k3d-local-agent-0    <none>           <none>
 NAME                              READY   STATUS      RESTARTS       AGE     IP           NODE                   NOMINATED NODE   READINESS GATES
-postgres-9bdddfcf5-9bnqw          1/1     Running     0              3m20s   10.42.0.25   k3d-desafio-server-0   <none>           <none>
-todolist-55bb6fdfdf-c9s98         1/1     Running     1 (3m7s ago)   3m20s   10.42.0.24   k3d-desafio-server-0   <none>           <none>
-todolist-55bb6fdfdf-rq2st         1/1     Running     1 (3m7s ago)   3m20s   10.42.1.19   k3d-desafio-agent-0    <none>           <none>
-todolist-cleanup-29816505-k8vbm   0/1     Completed   0              118s    10.42.0.27   k3d-desafio-server-0   <none>           <none>
+postgres-9bdddfcf5-9bnqw          1/1     Running     0              3m20s   10.42.0.25   k3d-local-server-0   <none>           <none>
+todolist-55bb6fdfdf-c9s98         1/1     Running     1 (3m7s ago)   3m20s   10.42.0.24   k3d-local-server-0   <none>           <none>
+todolist-55bb6fdfdf-rq2st         1/1     Running     1 (3m7s ago)   3m20s   10.42.1.19   k3d-local-agent-0    <none>           <none>
+todolist-cleanup-29816505-k8vbm   0/1     Completed   0              118s    10.42.0.27   k3d-local-server-0   <none>           <none>
 
 === sealed ===
 NAMESPACE             NAME                   AGE
