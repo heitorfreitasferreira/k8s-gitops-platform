@@ -1,0 +1,5 @@
+# Copie para terraform.tfvars e ajuste se necessario.
+
+cluster_name    = "local"
+kubeconfig_path = "~/.kube/local-k3d.kubeconfig"
+# k3d_config_path = "../clusters/local/k3d-config.yaml"

@@ -82,9 +82,11 @@ Stack entregue via Argo CD (Helm charts pinados), tudo em `observability`:
 | `clusters/local/argocd/argocd-ui-ingress.yaml` | UI do Argo no Ingress |
 | `clusters/local/sealed-secrets/` | controller Sealed Secrets (vendorizado, digest pinado) + cert publico |
 | `clusters/local/observability/` | ServiceMonitors, dashboards e secret do Grafana |
-| `k8s/base + k8s/overlays/staging|production/` | manifests da app (fonte unica: nao duplicar no fork) |
+| `k8s/base + k8s/overlays/staging|production/` | manifests da app (fonte unica: nao duplicar no repo da app) |
 | `envs/*.env.example` | modelo tangivel dos secrets (o `.env` preenchido nunca e commitado) |
 | `../todolist-app/.github/workflows/` | CI por branch (staging->overlay staging, production->production) |
+| `terraform/` | provisionamento do cluster (k3d) por Terraform; workloads seguem no Argo CD |
+| `loadtest/` | teste de carga k6 como Job (prova do HPA) |
 | `docs/` | logs, dumps e prints de navegador |
 
 ## Fluxo de branches (GitLab Flow, no repo da app)
@@ -131,15 +133,16 @@ Gate: `docker info` verde antes de continuar.
 | `kubectl` | v1.37 (skew ±1 do k3s vale) | https://kubernetes.io/docs/tasks/tools/ |
 | `kubeseal` | 0.39.1 (casa com o controller vendorizado) | tarball do release no `~/.local/bin` |
 | `kustomize` | v5.7.1 | tarball do release no `~/.local/bin` |
-| `gh` | opcional (monitorar CI/forks) | https://cli.github.com/manual/installation |
+| `gh` | opcional (monitorar CI/PRs) | https://cli.github.com/manual/installation |
 
 Obrigatórios para o `bootstrap.sh`: `k3d`, `kubectl` e `kubeseal`.
 (`kustomize` é usado pelo CI e pela validação local.)
 
-### 4. GitHub: fork, token e acesso
+### 4. GitHub: repos, token e acesso
 
-1. **Fork** `andreffcastro/todolist-app` para a sua conta. Se o seu usuário for
-   diferente de `heitorfreitasferreira`, ajuste `IMAGE` em
+1. **Repos** sob a mesma conta: `todolist-app` (codigo + CI) e
+   `k8s-gitops-platform` (manifests + Argo CD). Se o seu usuario for diferente
+   de `heitorfreitasferreira`, ajuste `IMAGE` em
    `todolist-app/.github/workflows/ci.yaml` e o nome da imagem nos overlays
    (`k8s/overlays/*/kustomization.yaml`).
 2. **Secret `GITOPS_BUMP_TOKEN`** no repo do app: um *fine-grained PAT* com
@@ -198,7 +201,7 @@ kubectl -n argocd get applications
 ```
 </details>
 
-Novo deploy: `git push` em `staging`/`production` no fork `todolist-app`
+Novo deploy: `git push` em `staging`/`production` no repo `todolist-app`
 dispara a CI (test -> build -> GHCR -> bump de digest no overlay certo -> Argo sync).
 
 ## Problemas encontrados no caminho

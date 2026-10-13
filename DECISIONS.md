@@ -6,10 +6,10 @@ Formato: data + contexto + escolha + descarte. Sem cerimonia de ADR (1 decisao =
   Escolha: k3d (k3s em Docker, descartavel em 1 comando). Descarte: kind (nao e k3s),
   minikube (sujaria ~/.minikube), cloud (custo + conta pessoal).
 - 2026-09-09 · 2 repos (opcao A). Contexto: separar CI (app) de CD (GitOps).
-  Escolha: fork `todolist-app` (codigo + workflow) + `k8s-gitops-platform` (manifests + Argo CD).
+  Escolha: `todolist-app` (codigo + workflow) + `k8s-gitops-platform` (manifests + Argo CD).
   Descarte: monorepo (misturaria CI com fonte de deploy).
 - 2026-09-09 · Manifests em fonte unica. Contexto: evitar drift entre os dois repos.
-  Escolha: `k8s/` SOMENTE em `k8s-gitops-platform`; fork sem `k8s/`. CI faz bump de digest aqui.
+  Escolha: `k8s/` SOMENTE em `k8s-gitops-platform`; repo da app sem `k8s/`. CI faz bump de digest aqui.
 - 2026-09-09 · Postgres simples junto no k3d. Contexto: validar SELECT/health sem HA.
   Escolha: Deployment + Service + PVC (sem replicas). Descarte: StatefulSet/HA, Postgres externo.
 - 2026-09-09 · Argo CD fonte de verdade. Escolha: Applications apontam para
@@ -43,7 +43,7 @@ Formato: data + contexto + escolha + descarte. Sem cerimonia de ADR (1 decisao =
   com aspas. Sem CronJob, `/cleanup/status` fica vazio e a Role `patch` nao se prova.
 - 2026-09-09 · Historico linear, sem purge. Contexto: `CHANGEME` antigo no historico.
   Escolha: correcao para frente (SealedSecrets novos), sem filter-repo/force-push;
-  e teste tecnico com segredos sinteticos, beleza do historico > purge.
+  e projeto de portfolio com segredos sinteticos, beleza do historico > purge.
 - 2026-09-11 · Observabilidade com kube-prometheus-stack + Loki + Alloy (via Argo/Helm
   pinado). Contexto: pedido de bonus com metricas de cluster, recursos, banco e app.
   Escolha: stack padrao do mercado com charts pinados e dashboards prontos
@@ -165,7 +165,19 @@ Formato: data + contexto + escolha + descarte. Sem cerimonia de ADR (1 decisao =
   cada restart) e dashboards por UID (nao era a causa: o datasource existia,
   o plugin e que nao).
 - 2026-09-11 · Repo da app so com `staging` (default) + `production` (protegida).
-  Contexto: a `main` do fork era vestigial no GitLab Flow (o CI usa staging/
+  Contexto: a `main` do repo da app era vestigial no GitLab Flow (o CI usa staging/
   production e o bump aponta para a main do k8s-gitops-platform, nao do app).
   Escolha: remover a `main` (ancestral de staging, sem perda de historico).
   Descarte: manter as 3 branches (ambiguidade sobre a principal).
+- 2026-10-13 · Terraform provisiona o cluster, Argo entrega os workloads.
+  Contexto: IaC com Terraform e requisito frequente e o k3d estava so no script.
+  Escolha: `terraform/` cria/destroi o cluster a partir do `k3d-config.yaml`
+  (binario k3d via `local-exec` com guard de idempotencia, hash do config nos
+  triggers). Descarte: provider nao oficial do k3d (dependencia fragil) e
+  duplicar manifests de app no Terraform (segunda fonte de verdade, o Argo ja
+  reconcilia). Validado no CI (`fmt -check` + `validate`, backend local).
+- 2026-10-13 · Teste de carga com k6 como Job no cluster. Contexto: o HPA existe
+  mas faltava prova empirica do 2->N sob carga. Escolha: `loadtest/` roda
+  `grafana/k6` como Job no namespace staging, alvo o Service `todolist`,
+  credenciais do Secret `todolist-auth`, rampa ate 60 VUs. Descarte: k6 na
+  maquina local (o Job deixa a evidencia repetivel e versionada).

@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: todolist-staging
+resources:
+  - job.yaml
+configMapGenerator:
+  - name: loadtest-script
+    files:
+      - k6/loadtest.js
+# O Job referencia o ConfigMap pelo nome fixo em volumes.configMap; sem o hash,
+# o nome nao muda e a referencia continua valida.
+generatorOptions:
+  disableNameSuffixHash: true

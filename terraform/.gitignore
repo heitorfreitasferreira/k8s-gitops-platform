@@ -1,0 +1,11 @@
+# Estado local do Terraform nunca vai para o Git.
+*.tfstate
+*.tfstate.*
+.terraform/
+crash.log
+override.tf
+override.tf.json
+
+# Variaveis locais: o exemplo entra, o preenchido nao.
+*.tfvars
+!*.tfvars.example

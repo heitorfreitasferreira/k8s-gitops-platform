@@ -1,0 +1,47 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: loadtest
+  labels:
+    app: loadtest
+spec:
+  # Uma tentativa so: a meta e observar o HPA reagir, nao sobreviver a falhas.
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 300
+  template:
+    metadata:
+      labels:
+        app: loadtest
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: k6
+          # k6 pinado por tag; em producao, pinar por digest.
+          image: grafana/k6:0.55.0
+          args: ["run", "/scripts/loadtest.js"]
+          env:
+            # Alvo: Service 'todolist' no mesmo namespace. Sem passar pelo Ingress.
+            - name: BASE_URL
+              value: http://todolist
+            # Credenciais do login vem do mesmo Secret que a app usa.
+            - name: ADMIN_USER
+              valueFrom:
+                secretKeyRef:
+                  name: todolist-auth
+                  key: ADMIN_USER
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: todolist-auth
+                  key: ADMIN_PASSWORD
+          volumeMounts:
+            - name: script
+              mountPath: /scripts
+              readOnly: true
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 256Mi }
+      volumes:
+        - name: script
+          configMap:
+            name: loadtest-script
