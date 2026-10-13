@@ -4,6 +4,7 @@ locals {
   # O hash entra nos triggers: mudar a topologia (portas, nodes, imagem do k3s)
   # recria o cluster, em vez de deixar um ambiente que nao corresponde ao codigo.
   config_hash = fileexists(local.k3d_config) ? filesha256(local.k3d_config) : "config-ausente"
+  kubeconfig  = pathexpand(var.kubeconfig_path)
 }
 
 # O cluster e a unica parte que o Terraform gerencia. Os workloads (app,
