@@ -20,5 +20,5 @@ configMapGenerator:
       - APP_NAME=TodoList
 images:
   - name: ghcr.io/heitorfreitasferreira/todolist-app
-    newTag: 2403ff952fd2e5173ff2ed2fd2f8eaf51b5831bc
-    digest: sha256:72e079354297066e9ad559ba7688c7804709515f3630ae4bb7ae4c37d562cd7a
+    newTag: 179f41489758a4df52851f35114e5287a649ea5a
+    digest: sha256:054b9f961a3a75fa905b9d7e7e82ab88effd0a199a2dd6f06b2289cdf1bff47e
