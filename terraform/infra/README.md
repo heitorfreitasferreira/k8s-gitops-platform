@@ -4,6 +4,43 @@ Camada de infraestrutura do `k8s-gitops-platform`. Provisiona as VMs com
 libvirt e sobe o cluster Talos pelo provider `siderolabs/talos`, devolvendo o
 kubeconfig. Os workloads continuam no Argo CD.
 
+## Arquitetura
+
+### Topologia (rede e nos)
+
+```mermaid
+flowchart TB
+  subgraph net["rede NAT default - virbr0 - 192.168.122.0/24"]
+    dnsmasq["dnsmasq .1"]
+    cp["talos-cp-1 .10"]
+    w1["talos-worker-1 .11"]
+    w2["talos-worker-2 .12"]
+  end
+  dnsmasq -->|reserva de MAC| cp
+  dnsmasq -->|reserva de MAC| w1
+  dnsmasq -->|reserva de MAC| w2
+```
+
+### Volumes (disco)
+
+```mermaid
+flowchart LR
+  factory["Image Factory qcow2"] --> base["volume base"]
+  base -->|CoW| cp["talos-cp-1"]
+  base -->|CoW| w1["talos-worker-1"]
+  base -->|CoW| w2["talos-worker-2"]
+```
+
+### Provisionamento (Talos)
+
+```mermaid
+flowchart LR
+  secrets["machine_secrets"] --> config["machine_configuration"]
+  config --> apply["configuration_apply"]
+  apply --> boot["machine_bootstrap"]
+  boot --> kube["cluster_kubeconfig"]
+```
+
 ## Pre-requisitos no host
 
 - Pacotes: `libvirt`, `qemu-full`, `edk2-ovmf` (firmware UEFI).
