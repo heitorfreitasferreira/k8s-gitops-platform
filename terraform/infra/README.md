@@ -197,8 +197,9 @@ terraform destroy
   pedido em `network_interface.addresses`, que o dnsmasq do libvirt reserva.
 - Volume base unico, baixado da Image Factory uma vez. Cada no usa uma camada
   CoW sobre ele.
-- Rede do Talos com `cni = none`. O Cilium entra na camada do `platform`, para
-  nao criar duas fontes de verdade da malha.
+- Rede do Talos com `cni = none` e `proxy.disabled = true`. O Cilium entra na
+  camada do `platform` em modo kube-proxy-free, para nao criar duas fontes de
+  verdade da malha nem deixar o kube-proxy brigando pelas mesmas rotas.
 - `lifecycle.ignore_changes` em `nvram` e `disk[0].wwn`: o provider gera esses
   valores na criacao e mudam a cada boot, sem serem configuracao.
 - Estado local por padrao. Backend remoto (S3 + DynamoDB) comentado em

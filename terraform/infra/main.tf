@@ -35,7 +35,11 @@ locals {
   # iscsi-tools embutidos pelo schematic. Sem download manual e sem descompactar.
   image_url = "https://factory.talos.dev/image/${var.image_schematic_id}/${local.talos_version_tag}/${var.image_platform}-${var.image_architecture}.qcow2"
 
-  # CNI fica desligada aqui: o Cilium entra na camada do platform.
+  # Rede fica fora daqui: o Cilium entra na camada do platform.
+  # - cni = none: o Talos nao sobe CNI proprio.
+  # - proxy.disabled: o Cilium roda em modo kube-proxy-free, entao o
+  #   kube-proxy do Talos precisa estar desligado (os dois juntos brigariam
+  #   pelas mesmas rotas).
   base_config_patches = [
     yamlencode({
       cluster = {
@@ -43,6 +47,9 @@ locals {
           cni = {
             name = "none"
           }
+        }
+        proxy = {
+          disabled = true
         }
       }
     }),

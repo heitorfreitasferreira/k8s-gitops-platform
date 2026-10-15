@@ -1,0 +1,13 @@
+# Copie para terraform.tfvars e ajuste se necessario.
+
+# Kubeconfig gerado pelo modulo infra:
+#   cd terraform/infra && terraform output -raw kubeconfig > ~/.kube/talos-kubeconfig
+kubeconfig_path = "~/.kube/talos-kubeconfig"
+
+# Pool de IPs do MetalLB, na mesma rede das VMs (libvirt NAT 192.168.122.0/24).
+# As VMs ficam em .10-.12, entao o pool usa o fim da faixa.
+metallb_addresses = ["192.168.122.200-192.168.122.210"]
+
+# Hosts dos Ingress (`.localhost` resolve loopback sem DNS externo).
+# argocd_hostname = "argocd.localhost"
+# hubble_hostname = "hubble.localhost"

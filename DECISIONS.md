@@ -176,7 +176,29 @@ Formato: data + contexto + escolha + descarte. Sem cerimonia de ADR (1 decisao =
   triggers). Descarte: provider nao oficial do k3d (dependencia fragil) e
   duplicar manifests de app no Terraform (segunda fonte de verdade, o Argo ja
   reconcilia). Validado no CI (`fmt -check` + `validate`, backend local).
-- 2026-10-13 · Teste de carga com k6 como Job no cluster. Contexto: o HPA existe
+- 2026-10-15 · Talos com `cni = none` e `proxy.disabled = true`. Contexto: o
+  Cilium entra na camada do `platform` em modo kube-proxy-free. Escolha: o
+  `infra` desliga o CNI e o kube-proxy do Talos, o Cilium assume a rede e a
+  substituicao do kube-proxy. Descarte: deixar o kube-proxy ligado (os dois
+  programariam as mesmas rotas).
+- 2026-10-15 · Plataforma instalada por Terraform Helms, nao por Argo CD.
+  Contexto: o Argo CD precisa de rede, ingress e IP externo para existir, entao
+  nao pode instalar os proprios pre-requisitos. Escolha: `terraform/platform/`
+  instala Cilium, MetalLB, Traefik, Argo CD e metrics-server. Depois disso o
+  Argo CD entrega os workloads (fonte de verdade segue no Git).
+- 2026-10-15 · Cilium no Talos com KubePrism e sem `SYS_MODULE`. Contexto: o
+  init container `clean-cilium-state` morria com `unable to apply caps` e o
+  Cilium nao achava a API sem Service. Escolha: `k8sServiceHost=localhost` e
+  porta `7445` (KubePrism do Talos), capabilities sem `SYS_MODULE`, cgroup
+  reusando `/sys/fs/cgroup` e `bpf.hostLegacyRouting=true`. Descarte: apontar o
+  Cilium para o IP do control plane (depende de Service que ainda nao existe) e
+  manter as capabilities padrao (bloqueadas pelo Talos).
+- 2026-10-15 · Namespace do MetalLB com Pod Security `privileged`. Contexto: o
+  Talos aplica Pod Security Admission em `baseline` por padrao e o speaker usa
+  `hostNetwork` + `NET_RAW`. Escolha: criar `metallb-system` por
+  `kubectl_manifest` com o rotulo `privileged` antes do chart. Descarte: confiar
+  no `create_namespace` do Helm (namespace sem rotulo, pods barrados).
+- 2026-10-15 · Teste de carga com k6 como Job no cluster. Contexto: o HPA existe
   mas faltava prova empirica do 2->N sob carga. Escolha: `loadtest/` roda
   `grafana/k6` como Job no namespace staging, alvo o Service `todolist`,
   credenciais do Secret `todolist-auth`, rampa ate 60 VUs. Descarte: k6 na

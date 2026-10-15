@@ -1,0 +1,64 @@
+# Evidencia: plataforma Talos (issue #14)
+# Data: 2026-10-15T16:19:14-03:00
+
+## terraform/platform: helm releases
+api_server = "https://192.168.122.10:6443"
+argocd_url = "http://argocd.localhost"
+hubble_url = "http://hubble.localhost"
+metallb_addresses = tolist([
+  "192.168.122.200-192.168.122.210",
+])
+traefik_namespace = "traefik"
+
+## Nos (Cilium kube-proxy-free)
+NAME             STATUS   ROLES           AGE     VERSION   INTERNAL-IP      EXTERNAL-IP   OS-IMAGE          KERNEL-VERSION          CONTAINER-RUNTIME
+talos-cp-1       Ready    control-plane   4h41m   v1.36.0   192.168.122.10   <none>        Talos (v1.13.3)   6.18.33-talos (amd64)   containerd://2.2.4
+talos-worker-1   Ready    <none>          4h41m   v1.36.0   192.168.122.11   <none>        Talos (v1.13.3)   6.18.33-talos (amd64)   containerd://2.2.4
+talos-worker-2   Ready    <none>          4h41m   v1.36.0   192.168.122.12   <none>        Talos (v1.13.3)   6.18.33-talos (amd64)   containerd://2.2.4
+
+## kube-system sem CrashLoop
+NAME                                 READY   STATUS    RESTARTS       AGE
+cilium-envoy-ccw9k                   1/1     Running   0              38m
+cilium-envoy-f8czw                   1/1     Running   0              38m
+cilium-envoy-lv2fs                   1/1     Running   0              38m
+cilium-operator-cd5dd844b-kf9s2      1/1     Running   6 (11m ago)    38m
+cilium-pdf4j                         1/1     Running   0              38m
+cilium-vsndg                         1/1     Running   0              38m
+cilium-z2mj6                         1/1     Running   0              38m
+coredns-6dc87b5c58-mpvwl             1/1     Running   0              4h41m
+coredns-6dc87b5c58-sb5dl             1/1     Running   0              4h41m
+hubble-relay-558cf46f5d-nt77d        1/1     Running   0              38m
+hubble-ui-5586f868f6-6mjz4           2/2     Running   0              38m
+kube-apiserver-talos-cp-1            1/1     Running   0              4h41m
+kube-controller-manager-talos-cp-1   1/1     Running   11 (11m ago)   4h41m
+kube-scheduler-talos-cp-1            1/1     Running   9 (11m ago)    4h41m
+metrics-server-55c6b8755f-bqzx4      1/1     Running   0              38m
+
+## Traefik com IP externo do MetalLB
+NAME      TYPE           CLUSTER-IP       EXTERNAL-IP       PORT(S)                      AGE
+traefik   LoadBalancer   10.108.185.123   192.168.122.200   80:32266/TCP,443:32623/TCP   18m
+
+## Argo CD
+NAME                                                        READY   STATUS    RESTARTS   AGE
+argo-cd-argocd-application-controller-0                     1/1     Running   0          16m
+argo-cd-argocd-applicationset-controller-678b4b84f8-tq82n   1/1     Running   0          16m
+argo-cd-argocd-dex-server-559bb44468-24g2z                  1/1     Running   0          16m
+argo-cd-argocd-notifications-controller-7c44bdfc55-j98td    1/1     Running   0          16m
+argo-cd-argocd-redis-6c8445d74c-bfbfg                       1/1     Running   0          16m
+argo-cd-argocd-repo-server-74c5675547-lw2g7                 1/1     Running   0          16m
+argo-cd-argocd-server-74795d6d86-8r284                      1/1     Running   0          16m
+
+## kubectl top nodes
+NAME             CPU(cores)   CPU(%)   MEMORY(bytes)   MEMORY(%)   
+talos-cp-1       108m         5%       1666Mi          50%         
+talos-worker-1   59m          3%       787Mi           23%         
+talos-worker-2   54m          2%       834Mi           24%         
+
+## Cilium status
+KubeProxyReplacement:    True   [enp1s0   192.168.122.10 fe80::5054:ff:feca:fe01 (Direct Routing)]
+Routing:                 Network: Tunnel [vxlan]   Host: Legacy
+Hubble:                  Ok              Current/Max Flows: 4095/4095 (100.00%), Flows/s: 8.36   Metrics: Disabled
+
+## Ingress via MetalLB IP
+argocd.localhost  -> HTTP 200
+hubble.localhost  -> HTTP 200
