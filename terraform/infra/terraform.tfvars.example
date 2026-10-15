@@ -1,0 +1,17 @@
+# Copie para terraform.tfvars e ajuste se necessario.
+
+cluster_name  = "talos"
+libvirt_uri   = "qemu:///system"
+network_cidr  = "192.168.122.0/24"
+talos_version = "1.13.3"
+
+# firmware_path padrão no Arch/Omarchy:
+# firmware_path = "/usr/share/edk2/x64/OVMF_CODE.4m.fd"
+
+# Control plane em .10, workers em .11 e .12 (defaults):
+# controlplane_hostnum_start = 10
+# worker_hostnum_start       = 11
+
+# Para trocar as extensoes da imagem, regenere o schematic na Image Factory e
+# aponte o ID aqui:
+# image_schematic_id = "<novo-id>"
