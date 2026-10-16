@@ -18,12 +18,23 @@ spec:
         app: todolist
     spec:
       serviceAccountName: todolist
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
       # O gunicorn sobe o app e roda create_all() no import: sem o Postgres de
       # pe, os workers falham e o master sai (CrashLoop no primeiro deploy).
       # O initContainer espera o banco aceitar conexoes antes de iniciar a app.
       initContainers:
         - name: wait-for-postgres
           image: postgres:16-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+            readOnlyRootFilesystem: true
           command:
             - sh
             - -c
@@ -35,6 +46,11 @@ spec:
         - name: todolist
           # Imagem fixada por digest imutavel no overlay (nunca :latest).
           image: ghcr.io/heitorfreitasferreira/todolist-app:PLACEHOLDER-DIGEST
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+            readOnlyRootFilesystem: true
           ports:
             - containerPort: 5000
           env:
@@ -63,6 +79,9 @@ spec:
             # prometheus-client multiprocess escreve arquivos aqui.
             - name: metrics
               mountPath: /tmp/prometheus-multiproc
+            - name: service-account
+              mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+              readOnly: true
           # startupProbe generosa: o gunicorn so escuta depois do create_all()
           # (que depende do Postgres). Sem ela, a liveness matava o pod durante
           # a subida fria do banco (restart-loop no primeiro deploy do cluster).
@@ -109,6 +128,22 @@ spec:
                       path: CLEANUP_TOKEN
         - name: metrics
           emptyDir: {}
+        - name: service-account
+          projected:
+            sources:
+              - serviceAccountToken:
+                  path: token
+                  expirationSeconds: 3600
+              - downwardAPI:
+                  items:
+                    - path: namespace
+                      fieldRef:
+                        fieldPath: metadata.namespace
+              - configMap:
+                  name: kube-root-ca.crt
+                  items:
+                    - key: ca.crt
+                      path: ca.crt
 ---
 apiVersion: v1
 kind: Service

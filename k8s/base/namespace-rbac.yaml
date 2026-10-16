@@ -2,6 +2,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: todolist
+automountServiceAccountToken: false
 ---
 # /pods e o status de cleanup leem a API do Kubernetes via ServiceAccount.
 # Leitura minima no proprio namespace. O RoleBinding e completado pelo

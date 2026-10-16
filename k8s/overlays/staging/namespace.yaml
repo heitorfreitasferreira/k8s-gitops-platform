@@ -5,3 +5,5 @@ metadata:
   labels:
     app.kubernetes.io/part-of: todolist
     environment: staging
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
