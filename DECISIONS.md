@@ -239,3 +239,37 @@ Formato: data + contexto + escolha + descarte. Sem cerimonia de ADR (1 decisao =
   define ambiente, namespace e politica de sync. Staging usa sync automatico.
   Production exige sync manual. O AppProject permite namespaces `todolist-*`,
   entao adicionar um ambiente novo exige uma entrada no gerador.
+- 2026-10-16 · Tracing com Tempo monolitico + OTel Collector. Contexto: faltava
+  tracing distribuido para fechar a observabilidade. Escolha: chart `grafana/tempo`
+  em single-binary (1 pod, PVC `local-path` de 2Gi, retencao 72h) e chart
+  `open-telemetry/opentelemetry-collector` como Deployment, recebendo OTLP gRPC/HTTP
+  e exportando OTLP para o Tempo. `tempo.memBallastSizeMbs: 128` (o default de
+  1024 estoura o limite do container) e `serviceMonitor` do Tempo desligado (o
+  template do chart referencia a porta `jaeger-metrics`, que so existe com o
+  `tempoQuery` ligado). Descarte: modo distribuido (microservicos sem ganho em 1 no)
+  e Jaeger (projeto em modo manutencao).
+- 2026-10-16 · Collector com `alternateConfig`, nao `config`. Contexto: o chart
+  do collector faz merge do `.Values.config` com o default, e o default traz
+  receivers Jaeger/Zipkin e pipelines de logs/metricas com o exporter `debug`
+  (ruido e CPU sem uso). Escolha: `alternateConfig` substitui o config inteiro,
+  deixando so o receiver OTLP, `batch` e `memory_limiter`. Descarte: aceitar o
+  merge e filtrar depois (nao da para remover chave por merge de values).
+- 2026-10-16 · Instrumentacao da app com `opentelemetry-instrument`. Contexto:
+  a app roda sob gunicorn com 2 workers. Escolha: o entrypoint do container
+  passa a ser `opentelemetry-instrument gunicorn ...`, o que instrumenta Flask
+  (span HTTP) e SQLAlchemy (span do banco) e exporta OTLP para o collector via
+  env `OTEL_*` do ConfigMap do overlay. `SQLAlchemy` pinado em 2.0.x porque a
+  instrumentacao ainda nao cobre 2.1 (o dialeto `postgresql+psycopg2` ja era
+  explicito). Descarte: instrumentacao programatica (mais codigo na app).
+- 2026-10-16 · `trace_id` no log JSON e correlacao no Grafana. Contexto: sem o
+  id do trace no log, o Loki e o Tempo ficam ilhas. Escolha: o formatter JSON
+  inclui `trace_id`/`span_id` quando ha span ativo, o Alloy os extrai como
+  structured metadata e o Grafana liga os dois sentidos (derived field do Loki
+  para o Tempo, `tracesToLogsV2`/`tracesToMetrics` do Tempo para Loki e
+  Prometheus). Limitacao conhecida: o access log do gunicorn e emitido fora do
+  span, entao so os logs da app carregam o `trace_id`.
+- 2026-10-16 · Namespace `observability` com Pod Security `privileged`. Contexto:
+  o node-exporter e o Alloy usam hostNetwork/hostPID/hostPath/hostPort, que o
+  PSA `baseline` barra, entao os DaemonSets ficavam sem pods e travavam o sync
+  do kube-prometheus-stack. Escolha: rotulo `privileged` no namespace, igual ao
+  do MetalLB. Descarte: desligar o node-exporter (o objetivo e observar as VMs).

@@ -29,7 +29,7 @@ fonte de verdade.
    Talos em VMs libvirt ── Traefik (LoadBalancer do MetalLB)
         ├── todolist-staging      (auto-sync)
         ├── todolist-production   (sync manual = promocao)
-        └── observability         (Prometheus/Grafana/Loki/Alloy)
+        └── observability         (Prometheus/Grafana/Loki/Alloy/Tempo/OTel)
 ```
 
 ## Ambientes e interfaces
@@ -72,6 +72,13 @@ Stack entregue via Argo CD (Helm charts pinados), tudo em `observability`:
   ServiceMonitor por env.
 - **Dashboards**: `TodoList — Aplicacao e Recursos` (custom) e
   `PostgreSQL Database` (grafana.com #9628), auto-carregados pelo sidecar.
+- **Tracing distribuido**: Tempo 2.9.0 (single-binary, PVC `local-path`,
+  retencao 72h) + OTel Collector (contrib 0.162.0, receiver OTLP gRPC/HTTP,
+  exporter OTLP para o Tempo), ambos via Argo. A app roda com
+  `opentelemetry-instrument` e exporta spans de HTTP (Flask) e do banco
+  (SQLAlchemy). O Grafana tem o datasource do Tempo e correlacao nos dois
+  sentidos: o log JSON carrega `trace_id` (link para o trace) e o trace
+  aponta de volta para o Loki e para o Prometheus.
 
 ## O que esta onde
 
