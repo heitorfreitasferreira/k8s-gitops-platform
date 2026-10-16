@@ -1,0 +1,42 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: hubble-ui
+  namespace: argocd
+spec:
+  project: observability
+  source:
+    repoURL: https://helm.cilium.io
+    chart: cilium
+    targetRevision: 1.20.3
+    helm:
+      releaseName: hubble-ui
+      values: |
+        agent: false
+        cni:
+          install: false
+        operator:
+          enabled: false
+        hubble:
+          enabled: false
+          relay:
+            enabled: false
+          ui:
+            enabled: true
+            standalone:
+              enabled: true
+            ingress:
+              enabled: true
+              className: traefik
+              hosts:
+                - hubble.local
+              tls:
+                - hosts:
+                    - hubble.local
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

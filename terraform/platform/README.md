@@ -79,16 +79,17 @@ barrados.
 
 ### Acesso
 
-Os hosts resolvem para loopback (RFC 6761), sem DNS externo nem `/etc/hosts`:
+Os hosts locais apontam para o IP LoadBalancer do Traefik, configurado em
+`/etc/hosts`:
 
-- Argo CD: `http://argocd.localhost`
-- Hubble UI: `http://hubble.localhost`
+- Argo CD: `http://argocd.local`
+- Hubble UI: `http://hubble.local`
 
-O Traefik recebe um IP do pool do MetalLB (`192.168.122.200`). Para testar sem
-editar hosts:
+Consulte o IP atual do Traefik com `kubectl -n traefik get svc traefik`.
+Para testar sem editar hosts, use esse IP no cabeçalho `Host`:
 
 ```bash
-curl -H "Host: argocd.localhost" http://192.168.122.200/
+curl -H "Host: argocd.local" http://<TRAEFIK_IP>/
 ```
 
 ## Uso

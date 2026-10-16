@@ -5,9 +5,9 @@ metadata:
 spec:
   tls:
     - hosts:
-        - prod.localhost
+        - prod.local
   rules:
-    - host: prod.localhost
+    - host: prod.local
       http:
         paths:
           - path: /

@@ -11,7 +11,7 @@ spec:
   source:
     repoURL: https://github.com/heitorfreitasferreira/k8s-gitops-platform.git
     targetRevision: main
-    path: clusters/local/observability
+    path: clusters/talos/observability
   destination:
     server: https://kubernetes.default.svc
     namespace: observability

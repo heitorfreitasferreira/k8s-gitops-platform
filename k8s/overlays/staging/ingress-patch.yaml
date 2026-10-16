@@ -7,9 +7,9 @@ spec:
   # padrao (ok para local). Em producao: cert-manager + ACME/CA interna.
   tls:
     - hosts:
-        - staging.localhost
+        - staging.local
   rules:
-    - host: staging.localhost
+    - host: staging.local
       http:
         paths:
           - path: /

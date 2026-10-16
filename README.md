@@ -9,9 +9,9 @@ fonte de verdade.
 
 | Area | Como |
 |---|---|
-| Provisionamento | Cluster k3d definido em codigo (`clusters/local/k3d-config.yaml`); Argo CD, controller de secrets e apps aplicados por `bootstrap.sh` (um comando, repetivel, sem console). Observabilidade via Helm charts pinados. |
+| Provisionamento | Cluster Talos em VMs libvirt pelo Terraform; Cilium, MetalLB, Traefik, Argo CD e secrets pela camada platform. O Terraform registra as Applications do Argo CD. |
 | Deploy continuo | `git push` no repo da app -> CI (test + build GHCR) -> bump de digest no overlay -> Argo CD sincroniza. Sem passo manual. |
-| Acesso externo | Ingress (Traefik) no LB `127.0.0.1:80/443`, por host: staging/production/argocd/grafana. |
+| Acesso externo | Ingress Traefik pelo IP LoadBalancer do MetalLB, por host local. |
 | Escalabilidade e resiliencia | 2 replicas + HPA (2..5) + PDB + probes separadas (liveness `/livez`, readiness `/healthz`) + rolling update `maxUnavailable: 0` + requests/limits. |
 | Documentacao | Este README, `DECISIONS.md` (escolhas e descartes) e `docs/` (logs e screenshots de execucoes). |
 
@@ -26,7 +26,7 @@ fonte de verdade.
    k8s/base + overlays/ + clusters/
         │  Argo CD reconcilia
         ▼
-   k3d cluster "local" ── Traefik (127.0.0.1:80/443)
+   Talos em VMs libvirt ── Traefik (LoadBalancer do MetalLB)
         ├── todolist-staging      (auto-sync)
         ├── todolist-production   (sync manual = promocao)
         └── observability         (Prometheus/Grafana/Loki/Alloy)
@@ -36,10 +36,11 @@ fonte de verdade.
 
 | Env | Namespace | Cor | URL | Sync Argo |
 |---|---|---|---|---|
-| staging | `todolist-staging` | green | http://staging.localhost (https tb) | automatico |
-| production | `todolist-production` | blue | http://prod.localhost (https tb) | manual (promocao) |
-| Argo CD UI (bonus) | argocd | — | http://argocd.localhost | — |
-| Grafana | observability | — | http://grafana.localhost | — |
+| staging | `todolist-staging` | green | http://staging.local | automatico |
+| production | `todolist-production` | blue | http://prod.local | manual (promocao) |
+| Argo CD UI | argocd | — | http://argocd.local | — |
+| Grafana | observability | — | http://grafana.local | — |
+| Hubble UI | kube-system | — | http://hubble.local | — |
 
 Trocar a cor de um env = 1 linha (`APP_COLOR`) no `configMapGenerator` do
 overlay + push: o hash do ConfigMap muda, o kustomize reescreve o `envFrom` do
@@ -76,10 +77,9 @@ Stack entregue via Argo CD (Helm charts pinados), tudo em `observability`:
 
 | Caminho | Papel |
 |---|---|
-| `clusters/local/k3d-config.yaml` | cluster criado por codigo |
-| `clusters/local/argocd/` | install + projects + applications do Argo CD |
-| `clusters/local/argocd/argocd-ui-ingress.yaml` | UI do Argo no Ingress |
-| `clusters/local/observability/` | ServiceMonitors e dashboards |
+| `clusters/local/k3d-config.yaml` | configuracao legada do k3d |
+| `clusters/talos/argocd/` | projects, Applications e Ingress do Argo CD |
+| `clusters/talos/observability/` | ServiceMonitors e dashboards |
 | `k8s/base + k8s/overlays/staging|production/` | manifests da app (fonte unica: nao duplicar no repo da app) |
 | `envs/*.env.example` | exemplos sem credenciais |
 | `../todolist-app/.github/workflows/` | CI por branch (staging->overlay staging, production->production) |
@@ -97,10 +97,10 @@ Hotfix: branch `hotfix/*` da `production` -> PR em `production` (+ back-merge em
 Promocao: PR `staging -> production` -> merge -> CI bumpar o overlay production
 -> clicar Sync no Argo (production e manual de proposito).
 
-## Pré-requisitos (Linux x86_64 recém-instalado)
+## Pré-requisitos (Linux x86_64)
 
-Tudo que `bootstrap.sh` e o fluxo precisam, do zero até o cluster no ar. O agente
-**nunca roda `sudo` sozinho** — os passos com `sudo` você executa no terminal.
+O cluster usa VMs Talos em libvirt. Consulte `terraform/infra/README.md` para
+os requisitos do host e o provisionamento. O agente não executa `sudo`.
 
 ### 1. Utilitários base
 
@@ -111,31 +111,19 @@ sudo apt update && sudo apt install -y \
 
 (`curl`, `git`, `openssl` e `ss` são usados pelo script; `python3` valida YAML.)
 
-### 2. Docker
-
-Pela doc oficial (https://docs.docker.com/engine/install/), depois libere o acesso:
-
-```bash
-sudo usermod -aG docker "$USER"
-# relogue (ou reboot) e confira:
-docker info
-```
-
-Gate: `docker info` verde antes de continuar.
-
-### 3. CLIs (versões testadas aqui)
+### Ferramentas
 
 | Ferramenta | Versão | Instalação |
 |---|---|---|
-| `k3d` | v5.9.0 (cria k3s v1.35) | `curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh \| bash` |
-| `kubectl` | v1.37 (skew ±1 do k3s vale) | https://kubernetes.io/docs/tasks/tools/ |
+| `terraform` | >= 1.5 | https://developer.hashicorp.com/terraform/install |
+| `kubectl` | compatível com a versão do cluster | https://kubernetes.io/docs/tasks/tools/ |
 | `kustomize` | v5.7.1 | tarball do release no `~/.local/bin` |
 | `gh` | opcional (monitorar CI/PRs) | https://cli.github.com/manual/installation |
 
 Obrigatórios para o `bootstrap.sh`: `terraform` e `kubectl`. O modulo `terraform/infra` deve criar o cluster Talos e o kubeconfig antes da execucao.
 (`kustomize` é usado pelo CI e pela validação local.)
 
-### 4. GitHub: repos, token e acesso
+### GitHub: repos, token e acesso
 
 1. **Repos** sob a mesma conta: `todolist-app` (codigo + CI) e
    `k8s-gitops-platform` (manifests + Argo CD). Se o seu usuario for diferente
@@ -151,13 +139,17 @@ Obrigatórios para o `bootstrap.sh`: `terraform` e `kubectl`. O modulo `terrafor
    primeiro build, verifique a visibilidade do pacote em
    `ghcr.io/<user>/todolist-app`.
 
-### 5. Máquina e rede
+### Acesso local
 
-- Recursos: o stack sobe ~25 pods — reserve **4 vCPU / 6–8 GiB** livres para o Docker.
-- Portas livres em loopback: **6444** (API), **80 e 443** (LB):
-  `ss -tlnp | grep -E ':(80|443|6444)\b'` deve sair vazio.
-- `KUBECONFIG` isolado: `export KUBECONFIG=~/.kube/local-k3d.kubeconfig`
+- Recursos: o stack sobe cerca de 25 pods. Reserve **4 vCPU / 6–8 GiB** para as VMs.
+- `KUBECONFIG` isolado: `export KUBECONFIG=~/.kube/talos-kubeconfig`
   (nunca toque em `~/.kube/config`).
+- Hosts locais: adicione os hosts abaixo a `/etc/hosts`, usando o IP atual do
+  Service LoadBalancer do Traefik. Consulte-o com `kubectl -n traefik get svc`.
+
+```text
+<TRAEFIK_IP> staging.local prod.local argocd.local grafana.local hubble.local
+```
 
 ## Reproducao (do zero)
 
@@ -168,25 +160,8 @@ export KUBECONFIG=~/.kube/talos-kubeconfig
 ./bootstrap.sh                 # aplica Terraform platform e registra as Applications
 ```
 
-<details><summary>Passo a passo manual (equivalente)</summary>
-
-```bash
-k3d cluster create --config clusters/local/k3d-config.yaml
-kubectl apply -f clusters/local/argocd/namespace.yaml
-kubectl apply -n argocd -f clusters/local/argocd/install.yaml
-kubectl -n argocd rollout status deployment/argocd-server
-kubectl -n argocd patch deployment argocd-server --type=json \
-  --patch-file clusters/local/argocd/argocd-server-insecure.patch.json
-kubectl apply -f clusters/local/argocd/argocd-ui-ingress.yaml
-kubectl apply -f clusters/local/argocd/project.yaml
-kubectl apply -f clusters/local/argocd/project-observability.yaml
-# Terraform platform cria os Secrets antes de registrar as Applications.
-for app in staging production kube-prometheus-stack loki alloy observability; do
-  kubectl apply -f clusters/local/argocd/application-$app.yaml
-done
-kubectl -n argocd get applications
-```
-</details>
+`bootstrap.sh` executa `terraform/platform`, que cria os Secrets, os projetos e
+as Applications. O Argo CD instala os workloads, observabilidade e Hubble UI.
 
 Novo deploy: `git push` em `staging`/`production` no repo `todolist-app`
 dispara a CI (test -> build -> GHCR -> bump de digest no overlay certo -> Argo sync).

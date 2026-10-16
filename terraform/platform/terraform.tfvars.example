@@ -8,6 +8,5 @@ kubeconfig_path = "~/.kube/talos-kubeconfig"
 # As VMs ficam em .10-.12, entao o pool usa o fim da faixa.
 metallb_addresses = ["192.168.122.200-192.168.122.210"]
 
-# Hosts dos Ingress (`.localhost` resolve loopback sem DNS externo).
-# argocd_hostname = "argocd.localhost"
-# hubble_hostname = "hubble.localhost"
+# Host do Ingress do Argo CD. Os demais hosts ficam nos manifests do repo.
+# argocd_hostname = "argocd.local"

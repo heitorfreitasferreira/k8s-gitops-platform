@@ -74,12 +74,7 @@ locals {
       relay:
         enabled: true
       ui:
-        enabled: true
-        ingress:
-          enabled: true
-          className: traefik
-          hosts:
-            - ${var.hubble_hostname}
+        enabled: false
   YAML
 
   # frrk8s (BGP via FRR) desligado: o pool aqui e anunciado em L2, entao o
@@ -107,9 +102,7 @@ locals {
       service:
         type: ClusterIP
       ingress:
-        enabled: true
-        ingressClassName: traefik
-        hostname: ${var.argocd_hostname}
+        enabled: false
   YAML
 
   # Talos usa certificado self-signed no kubelet; sem --kubelet-insecure-tls o
@@ -174,6 +167,11 @@ resource "kubernetes_namespace" "workloads" {
       "app.kubernetes.io/part-of" = "todolist"
       environment                 = trimprefix(each.key, "todolist-")
     }
+  }
+
+  # Argo CD adds its tracking annotation to the same namespaces.
+  lifecycle {
+    ignore_changes = [metadata[0].annotations]
   }
 }
 
@@ -549,6 +547,42 @@ resource "helm_release" "argocd" {
   values = [local.argocd_values]
 
   depends_on = [helm_release.traefik]
+}
+
+resource "kubectl_manifest" "argocd_ingress" {
+  yaml_body = templatefile("${path.module}/../../clusters/talos/argocd/argocd-ui-ingress.yaml", {
+    hostname = var.argocd_hostname
+  })
+
+  depends_on = [helm_release.argocd]
+}
+
+resource "kubectl_manifest" "argocd_projects" {
+  for_each  = toset(["project", "project-observability"])
+  yaml_body = file("${path.module}/../../clusters/talos/argocd/${each.value}.yaml")
+
+  depends_on = [helm_release.argocd]
+}
+
+resource "kubectl_manifest" "argocd_applications" {
+  for_each = toset([
+    "application-staging",
+    "application-production",
+    "application-kube-prometheus-stack",
+    "application-loki",
+    "application-alloy",
+    "application-observability",
+    "application-hubble",
+  ])
+  yaml_body = file("${path.module}/../../clusters/talos/argocd/${each.value}.yaml")
+
+  depends_on = [
+    helm_release.argocd,
+    kubectl_manifest.argocd_projects,
+    kubernetes_secret.todolist_auth,
+    kubernetes_secret.postgres_credentials,
+    kubernetes_secret.grafana_admin,
+  ]
 }
 
 # ---------------------------------------------------------------------------

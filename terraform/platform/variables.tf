@@ -70,13 +70,7 @@ variable "argocd_namespace" {
 }
 
 variable "argocd_hostname" {
-  description = "Host do Ingress da UI do Argo CD (RFC 6761: resolve para loopback sem DNS externo)."
+  description = "Host local da UI do Argo CD."
   type        = string
-  default     = "argocd.localhost"
-}
-
-variable "hubble_hostname" {
-  description = "Host do Ingress da UI do Hubble."
-  type        = string
-  default     = "hubble.localhost"
+  default     = "argocd.local"
 }

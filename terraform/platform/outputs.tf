@@ -20,5 +20,5 @@ output "argocd_url" {
 
 output "hubble_url" {
   description = "URL da UI do Hubble (via Ingress do Traefik)."
-  value       = "http://${var.hubble_hostname}"
+  value       = "http://hubble.local"
 }

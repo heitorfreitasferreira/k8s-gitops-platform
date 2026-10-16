@@ -9,6 +9,7 @@ spec:
     - https://github.com/heitorfreitasferreira/k8s-gitops-platform.git
     - https://prometheus-community.github.io/helm-charts
     - https://grafana.github.io/helm-charts
+    - https://helm.cilium.io
   destinations:
     - server: https://kubernetes.default.svc
       namespace: observability

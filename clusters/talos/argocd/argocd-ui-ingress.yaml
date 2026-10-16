@@ -1,6 +1,3 @@
-# Bonus: ArgoCD UI acessivel pelo mesmo LB (Traefik), sem port-forward.
-# O argocd-server roda com --insecure (TLS terminado no proprio cluster,
-# aceitavel para ambiente local); assim o Traefik fala HTTP simples com ele.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -10,15 +7,15 @@ spec:
   ingressClassName: traefik
   tls:
     - hosts:
-        - argocd.localhost
+        - ${hostname}
   rules:
-    - host: argocd.localhost
+    - host: ${hostname}
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: argocd-server
+                name: argo-cd-argocd-server
                 port:
                   number: 80

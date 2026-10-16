@@ -51,10 +51,10 @@ spec:
             enabled: true
             ingressClassName: traefik
             hosts:
-              - grafana.localhost
+              - grafana.local
             tls:
               - hosts:
-                  - grafana.localhost
+                  - grafana.local
           additionalDataSources:
             - name: Loki
               # uid fixo: as regras de alerta referenciam "loki".
