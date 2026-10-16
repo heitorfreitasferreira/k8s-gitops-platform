@@ -163,7 +163,12 @@ resource "kubernetes_namespace" "workloads" {
   for_each = toset(["todolist-staging", "todolist-production", "observability"])
   metadata {
     name = each.key
-    labels = each.key == "observability" ? {} : {
+    labels = each.key == "observability" ? {
+      # O node-exporter (DaemonSet) usa hostNetwork, hostPID, hostPath e
+      # hostPort, que o Pod Security Admission so libera em `privileged`.
+      # Mesmo padrao do namespace do MetalLB.
+      "pod-security.kubernetes.io/enforce" = "privileged"
+      } : {
       "app.kubernetes.io/part-of" = "todolist"
       environment                 = trimprefix(each.key, "todolist-")
     }
