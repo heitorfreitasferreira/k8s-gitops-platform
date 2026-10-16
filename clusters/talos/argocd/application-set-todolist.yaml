@@ -1,0 +1,39 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: todolist
+  namespace: argocd
+spec:
+  goTemplate: true
+  generators:
+    - list:
+        elements:
+          - environment: staging
+            namespace: todolist-staging
+            autoSync: "true"
+          - environment: production
+            namespace: todolist-production
+            autoSync: "false"
+  template:
+    metadata:
+      name: todolist-{{.environment}}
+    spec:
+      project: todolist
+      source:
+        repoURL: https://github.com/heitorfreitasferreira/k8s-gitops-platform.git
+        targetRevision: main
+        path: k8s/overlays/{{.environment}}
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: "{{.namespace}}"
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=true
+  templatePatch: |
+    {{- if eq .autoSync "true" }}
+    spec:
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+    {{- end }}

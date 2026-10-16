@@ -234,3 +234,8 @@ Formato: data + contexto + escolha + descarte. Sem cerimonia de ADR (1 decisao =
   MetalLB anuncia em L2 o pool `192.168.122.200-210`, longe das VMs (`.10-.12`).
   O namespace usa Pod Security `privileged`. Descarte: NodePort (portas altas
   fora do padrao HTTP) e backend FRR/BGP (peso morto para L2).
+- 2026-10-16 · ApplicationSet para staging e production. Contexto: duas
+  Applications manuais duplicavam a configuracao. Escolha: um gerador de lista
+  define ambiente, namespace e politica de sync. Staging usa sync automatico.
+  Production exige sync manual. O AppProject permite namespaces `todolist-*`,
+  entao adicionar um ambiente novo exige uma entrada no gerador.

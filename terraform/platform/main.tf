@@ -566,8 +566,7 @@ resource "kubectl_manifest" "argocd_projects" {
 
 resource "kubectl_manifest" "argocd_applications" {
   for_each = toset([
-    "application-staging",
-    "application-production",
+    "application-set-todolist",
     "application-kube-prometheus-stack",
     "application-loki",
     "application-alloy",

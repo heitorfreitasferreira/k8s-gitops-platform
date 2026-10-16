@@ -9,7 +9,7 @@ fonte de verdade.
 
 | Area | Como |
 |---|---|
-| Provisionamento | Cluster Talos em VMs libvirt pelo Terraform; Cilium, MetalLB, Traefik, Argo CD e secrets pela camada platform. O Terraform registra as Applications do Argo CD. |
+| Provisionamento | Cluster Talos em VMs libvirt pelo Terraform; Cilium, MetalLB, Traefik, Argo CD e secrets pela camada platform. O Terraform registra o ApplicationSet do Argo CD. |
 | Deploy continuo | `git push` no repo da app -> CI (test + build GHCR) -> bump de digest no overlay -> Argo CD sincroniza. Sem passo manual. |
 | Acesso externo | Ingress Traefik pelo IP LoadBalancer do MetalLB, por host local. |
 | Escalabilidade e resiliencia | 2 replicas + HPA (2..5) + PDB + probes separadas (liveness `/livez`, readiness `/healthz`) + rolling update `maxUnavailable: 0` + requests/limits. |
@@ -77,7 +77,7 @@ Stack entregue via Argo CD (Helm charts pinados), tudo em `observability`:
 
 | Caminho | Papel |
 |---|---|
-| `clusters/talos/argocd/` | projects, Applications e Ingress do Argo CD |
+| `clusters/talos/argocd/` | projects, ApplicationSet e Ingress do Argo CD |
 | `clusters/talos/observability/` | ServiceMonitors e dashboards |
 | `k8s/base + k8s/overlays/staging|production/` | manifests da app (fonte unica: nao duplicar no repo da app) |
 | `envs/*.env.example` | exemplos sem credenciais |

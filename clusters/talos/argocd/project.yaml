@@ -9,9 +9,7 @@ spec:
     - https://github.com/heitorfreitasferreira/k8s-gitops-platform.git
   destinations:
     - server: https://kubernetes.default.svc
-      namespace: todolist-staging
-    - server: https://kubernetes.default.svc
-      namespace: todolist-production
+      namespace: todolist-*
   clusterResourceWhitelist:
     - group: ""
       kind: Namespace
