@@ -570,6 +570,8 @@ resource "kubectl_manifest" "argocd_applications" {
     "application-kube-prometheus-stack",
     "application-loki",
     "application-alloy",
+    "application-tempo",
+    "application-otel-collector",
     "application-observability",
     "application-hubble",
   ])

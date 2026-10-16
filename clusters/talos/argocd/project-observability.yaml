@@ -18,12 +18,6 @@ spec:
     # control-plane (kube-controller-manager, scheduler, proxy) em kube-system.
     - server: https://kubernetes.default.svc
       namespace: kube-system
-    # Egress de tracing: a NetworkPolicy que libera a app para o collector
-    # mora no namespace da app (policy e namespace-scoped).
-    - server: https://kubernetes.default.svc
-      namespace: todolist-staging
-    - server: https://kubernetes.default.svc
-      namespace: todolist-production
   # Charts de observabilidade criam CRDs/ClusterRoles (cluster-scoped).
   clusterResourceWhitelist:
     - group: ""
