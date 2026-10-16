@@ -15,6 +15,16 @@ configMapGenerator:
     literals:
       - APP_COLOR=yellow
       - APP_NAME=TodoList
+      # Tracing (OTel): exporta OTLP para o collector, que grava no Tempo.
+      # Metricas e logs seguem no Prometheus (prometheus-flask-exporter) e no
+      # Loki (Alloy), entao os exporters de metricas/logs do OTel ficam off.
+      - OTEL_SERVICE_NAME=todolist
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector.observability.svc.cluster.local:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_METRICS_EXPORTER=none
+      - OTEL_LOGS_EXPORTER=none
+      - OTEL_RESOURCE_ATTRIBUTES=service.namespace=todolist,deployment.environment=production
 images:
   - name: ghcr.io/heitorfreitasferreira/todolist-app
     newTag: 179f41489758a4df52851f35114e5287a649ea5a

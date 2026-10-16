@@ -92,6 +92,8 @@ spec:
                     method      = "",
                     path        = "",
                     duration_us = "",
+                    trace_id    = "",
+                    span_id     = "",
                   }
                 }
 

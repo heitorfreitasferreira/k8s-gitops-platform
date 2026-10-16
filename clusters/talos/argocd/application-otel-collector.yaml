@@ -1,0 +1,100 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: otel-collector
+  namespace: argocd
+  annotations:
+    # Recebe OTLP da app e exporta para o Tempo (sync-wave 1).
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: observability
+  source:
+    repoURL: https://open-telemetry.github.io/opentelemetry-helm-charts
+    chart: opentelemetry-collector
+    targetRevision: 0.176.0
+    helm:
+      releaseName: otel-collector
+      values: |
+        mode: deployment
+        # Nome estavel: a app aponta para otel-collector.observability.svc.
+        fullnameOverride: otel-collector
+        replicaCount: 1
+        image:
+          repository: otel/opentelemetry-collector-contrib
+        # So OTLP entra. Jaeger e Zipkin ficam desligados (sem uso no projeto).
+        ports:
+          jaeger-compact:
+            enabled: false
+          jaeger-thrift:
+            enabled: false
+          jaeger-grpc:
+            enabled: false
+          zipkin:
+            enabled: false
+          metrics:
+            enabled: true
+        resources:
+          requests: { cpu: 50m, memory: 128Mi }
+          limits: { cpu: 500m, memory: 256Mi }
+        serviceMonitor:
+          enabled: true
+        # alternateConfig substitui o config default do chart. O `config` normal
+        # so faz merge (nao remove), e o default traz receivers jaeger/zipkin e
+        # pipelines de logs/metricas com o exporter `debug` (ruido sem uso).
+        alternateConfig:
+          receivers:
+            otlp:
+              protocols:
+                grpc:
+                  endpoint: ${env:MY_POD_IP}:4317
+                http:
+                  endpoint: ${env:MY_POD_IP}:4318
+          processors:
+            memory_limiter:
+              check_interval: 5s
+              limit_percentage: 80
+              spike_limit_percentage: 25
+            batch: {}
+          exporters:
+            # Exporta para o Tempo via OTLP gRPC (insecure: rede interna).
+            # Nome atual do exporter (o antigo `otlp` virou `otlp_grpc`).
+            otlp_grpc/tempo:
+              endpoint: tempo.observability.svc.cluster.local:4317
+              tls:
+                insecure: true
+          extensions:
+            # O chart exige o health_check para as probes.
+            health_check:
+              endpoint: ${env:MY_POD_IP}:13133
+          service:
+            extensions: [health_check]
+            pipelines:
+              traces:
+                receivers: [otlp]
+                processors: [memory_limiter, batch]
+                exporters: [otlp/tempo]
+            # Metricas internas do collector na porta `metrics` do Service,
+            # que o ServiceMonitor raspa.
+            telemetry:
+              metrics:
+                readers:
+                  - pull:
+                      exporter:
+                        prometheus:
+                          host: ${env:MY_POD_IP}
+                          port: 8888
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 10
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 5m

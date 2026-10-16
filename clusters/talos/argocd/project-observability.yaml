@@ -4,12 +4,13 @@ metadata:
   name: observability
   namespace: argocd
 spec:
-  description: Observabilidade (kube-prometheus-stack + Loki + Alloy)
+  description: Observabilidade (kube-prometheus-stack + Loki + Alloy + Tempo + OTel Collector)
   sourceRepos:
     - https://github.com/heitorfreitasferreira/k8s-gitops-platform.git
     - https://prometheus-community.github.io/helm-charts
     - https://grafana.github.io/helm-charts
     - https://helm.cilium.io
+    - https://open-telemetry.github.io/opentelemetry-helm-charts
   destinations:
     - server: https://kubernetes.default.svc
       namespace: observability
@@ -17,6 +18,12 @@ spec:
     # control-plane (kube-controller-manager, scheduler, proxy) em kube-system.
     - server: https://kubernetes.default.svc
       namespace: kube-system
+    # Egress de tracing: a NetworkPolicy que libera a app para o collector
+    # mora no namespace da app (policy e namespace-scoped).
+    - server: https://kubernetes.default.svc
+      namespace: todolist-staging
+    - server: https://kubernetes.default.svc
+      namespace: todolist-production
   # Charts de observabilidade criam CRDs/ClusterRoles (cluster-scoped).
   clusterResourceWhitelist:
     - group: ""

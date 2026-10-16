@@ -1,0 +1,50 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: tempo
+  namespace: argocd
+  annotations:
+    # O collector exporta para o Tempo, entao o Tempo vem antes.
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: observability
+  source:
+    repoURL: https://grafana.github.io/helm-charts
+    chart: tempo
+    targetRevision: 1.24.4
+    helm:
+      releaseName: tempo
+      values: |
+        # Modo monolitico (single binary): 1 pod, sem microservicos separados.
+        tempo:
+          # Retencao dos traces (block_retention do compactor). 72h, igual ao Loki.
+          retention: 72h
+          # O default do chart e 1024 MiB de ballast, maior que o limite do
+          # container. Reduzido para caber no no.
+          memBallastSizeMbs: 128
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 512Mi }
+        # Storage local no disco da VM (storage class local-path do Talos).
+        persistence:
+          enabled: true
+          storageClassName: local-path
+          size: 2Gi
+        # serviceMonitor desligado: o template do chart referencia a porta
+        # `jaeger-metrics`, que so existe com o tempoQuery ligado. Sem ele o
+        # ServiceMonitor ficaria com um endpoint invalido.
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 10
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 5m

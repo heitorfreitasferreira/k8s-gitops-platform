@@ -62,6 +62,37 @@ spec:
               type: loki
               url: http://loki-gateway.observability.svc.cluster.local
               access: proxy
+              jsonData:
+                # Log -> trace: o log JSON da app carrega trace_id
+                # (logging_json.py). O campo vira link para o trace no Tempo.
+                derivedFields:
+                  - name: trace_id
+                    matcherRegex: '"trace_id":"(\w+)"'
+                    url: "$${__value.raw}"
+                    datasourceUid: tempo
+                    urlDisplayLabel: Ver trace no Tempo
+            - name: Tempo
+              # uid fixo: o derivedField do Loki e o datasourceUid apontam aqui.
+              uid: tempo
+              type: tempo
+              url: http://tempo.observability.svc.cluster.local:3200
+              access: proxy
+              jsonData:
+                # Trace -> log: filtra o Loki pelo servico e pelo trace_id.
+                tracesToLogsV2:
+                  datasourceUid: loki
+                  spanStartTimeShift: "-5m"
+                  spanEndTimeShift: "5m"
+                  filterByTraceID: true
+                  filterBySpanID: false
+                  tags:
+                    - key: service.name
+                      value: app
+                # Trace -> metrica: salta para o Prometheus a partir do span.
+                tracesToMetrics:
+                  datasourceUid: prometheus
+                nodeGraph:
+                  enabled: true
           # Alerta simples (Grafana-managed) sobre logs de erro. Sem contato de
           # notificacao: o ambiente e local e descartavel (ver DECISIONS).
           alerting:
