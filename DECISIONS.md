@@ -213,3 +213,24 @@ Formato: data + contexto + escolha + descarte. Sem cerimonia de ADR (1 decisao =
   `grafana/k6` como Job no namespace staging, alvo o Service `todolist`,
   credenciais do Secret `todolist-auth`, rampa ate 60 VUs. Descarte: k6 na
   maquina local (o Job deixa a evidencia repetivel e versionada).
+- 2026-10-16 · Talos em vez de k3d ou kubeadm. Contexto: o k3d serviu no inicio
+  por ser descartavel em 1 comando. Ele roda k3s em Docker e nao representa um
+  cluster real. Escolha: Talos em VMs libvirt, com SO imutavel e API declarativa.
+  Descarte: k3d (demo em container) e kubeadm (carga operacional de SO mutavel).
+  O modulo Terraform raiz do k3d saiu do repo. A entrada unica agora e o Makefile.
+- 2026-10-16 · Cilium com Hubble Relay no Terraform e UI no Argo CD. Contexto:
+  o Talos nasce sem CNI e sem kube-proxy. A rede precisa existir antes dos
+  workloads. Escolha: Cilium kube-proxy-free no `terraform/platform`, com Hubble
+  Relay junto. A Hubble UI roda standalone pelo Argo CD. Descarte: CNI padrao do
+  Talos e Flannel (sem eBPF nem Hubble). Detalhes de flags em itens anteriores.
+- 2026-10-16 · Secrets gerados no Terraform, com valores em claro no state.
+  Contexto: sem provedor externo de secrets neste ambiente. Escolha:
+  `random_password` gera as credenciais e `kubernetes_secret` instala no cluster.
+  O state local contem os valores em claro mesmo com atributos sensiveis. Em uso
+  real o state exige backend cifrado com acesso restrito e locking. Descarte:
+  Sealed Secrets e External Secrets Operator. Ver item de 2026-10-16 sobre o tema.
+- 2026-10-16 · MetalLB em modo L2 com pool no fim da NAT. Contexto: VMs sem
+  load balancer externo. O Traefik precisa de IP estavel para o Ingress. Escolha:
+  MetalLB anuncia em L2 o pool `192.168.122.200-210`, longe das VMs (`.10-.12`).
+  O namespace usa Pod Security `privileged`. Descarte: NodePort (portas altas
+  fora do padrao HTTP) e backend FRR/BGP (peso morto para L2).

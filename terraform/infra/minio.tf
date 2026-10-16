@@ -2,7 +2,7 @@
 #
 # A VM vive na mesma rede NAT das VMs Talos, com IP fixo .20, e nao e exposta
 # na LAN de trabalho. O console ganha dominio via Ingress do Traefik
-# (clusters/local/minio-console-ingress.yaml); a API S3 fica so na rede interna.
+# (terraform/infra/minio-console-ingress.yaml, render local); a API S3 fica so na rede interna.
 
 locals {
   minio_address  = cidrhost(var.network_cidr, var.minio_hostnum)

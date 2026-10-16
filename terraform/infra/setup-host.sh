@@ -2,7 +2,6 @@
 set -euo pipefail
 
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-REPO="$(cd -- "$ROOT/../.." && pwd)"
 TFVARS="$ROOT/terraform.tfvars"
 URI="${LIBVIRT_URI:-}"
 
@@ -94,8 +93,8 @@ minio_hostnum = $MINIO_HOSTNUM
 EOF
 chmod 600 "$TFVARS"
 
-INGRESS_TEMPLATE="$REPO/clusters/local/minio-console-ingress.yaml.tftpl"
-INGRESS_RENDERED="$REPO/clusters/local/minio-console-ingress.yaml"
+INGRESS_TEMPLATE="$ROOT/templates/minio-console-ingress.yaml.tftpl"
+INGRESS_RENDERED="$ROOT/minio-console-ingress.yaml"
 [[ -r "$INGRESS_TEMPLATE" ]] || fail "template do Ingress nao encontrado: $INGRESS_TEMPLATE"
 sed "s|\${MINIO_IP}|$MINIO_IP|g" "$INGRESS_TEMPLATE" >"$INGRESS_RENDERED"
 

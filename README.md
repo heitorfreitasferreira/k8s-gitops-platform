@@ -77,12 +77,12 @@ Stack entregue via Argo CD (Helm charts pinados), tudo em `observability`:
 
 | Caminho | Papel |
 |---|---|
-| `clusters/local/k3d-config.yaml` | configuracao legada do k3d |
 | `clusters/talos/argocd/` | projects, Applications e Ingress do Argo CD |
 | `clusters/talos/observability/` | ServiceMonitors e dashboards |
 | `k8s/base + k8s/overlays/staging|production/` | manifests da app (fonte unica: nao duplicar no repo da app) |
 | `envs/*.env.example` | exemplos sem credenciais |
 | `../todolist-app/.github/workflows/` | CI por branch (staging->overlay staging, production->production) |
+| `terraform/infra/` | VMs Talos em libvirt + MinIO S3 externo (state local) |
 | `terraform/platform/` | plataforma, namespaces e secrets Kubernetes; workloads seguem no Argo CD |
 | `loadtest/` | teste de carga k6 como Job (prova do HPA) |
 | `docs/` | logs, dumps e prints de navegador |
@@ -109,7 +109,7 @@ sudo apt update && sudo apt install -y \
   curl git openssh-client python3 openssl iproute2 ca-certificates
 ```
 
-(`curl`, `git`, `openssl` e `ss` são usados pelo script; `python3` valida YAML.)
+(`curl`, `git`, `openssl` e `ss` sao usados pelo `setup-host.sh`; `python3` valida YAML.)
 
 ### Ferramentas
 
@@ -120,7 +120,7 @@ sudo apt update && sudo apt install -y \
 | `kustomize` | v5.7.1 | tarball do release no `~/.local/bin` |
 | `gh` | opcional (monitorar CI/PRs) | https://cli.github.com/manual/installation |
 
-Obrigatórios para o `bootstrap.sh`: `terraform` e `kubectl`. O modulo `terraform/infra` deve criar o cluster Talos e o kubeconfig antes da execucao.
+O `make up` exige `terraform` e `kubectl`. O `setup-host.sh` detecta a rede libvirt e gera o `terraform.tfvars` do `infra` antes do primeiro apply.
 (`kustomize` é usado pelo CI e pela validação local.)
 
 ### GitHub: repos, token e acesso
@@ -159,15 +159,17 @@ sudo sed -i 's/^hosts:.*/hosts: files mymachines mdns_minimal [NOTFOUND=return] 
 
 ## Reproducao (do zero)
 
-Execute o bootstrap depois de criar o cluster Talos e exportar o kubeconfig:
-
 ```bash
-export KUBECONFIG=~/.kube/talos-kubeconfig
-./bootstrap.sh                 # aplica Terraform platform e registra as Applications
+cd terraform/infra
+./setup-host.sh        # detecta libvirt e gera terraform.tfvars (600, gitignored)
+cd ../..
+make up                # infra apply -> kubeconfig -> platform apply
 ```
 
-`bootstrap.sh` executa `terraform/platform`, que cria os Secrets, os projetos e
-as Applications. O Argo CD instala os workloads, observabilidade e Hubble UI.
+`make up` aplica `terraform/infra` (VMs Talos + MinIO), grava o kubeconfig em
+`~/.kube/talos-kubeconfig` e aplica `terraform/platform` (Cilium, MetalLB,
+Traefik, Argo CD, secrets, Applications). O Argo CD instala os workloads,
+observabilidade e Hubble UI. Desmonta com `make down` (ordem inversa).
 
 Novo deploy: `git push` em `staging`/`production` no repo `todolist-app`
 dispara a CI (test -> build -> GHCR -> bump de digest no overlay certo -> Argo sync).
@@ -190,7 +192,8 @@ Registrados em detalhe no `DECISIONS.md`; os principais:
 
 - Postgres de 1 replica (sem HA) e sem backup automatico; sem TLS no Ingress.
 - Retencao de logs 72h e alerta sem notificacao (cluster local descartavel).
-- Segredos selados sao *cluster-bound*: a chave precisa de backup externo.
+- Secrets gerados pelo Terraform ficam em claro no state local. Em uso real, o
+  state precisa de backend cifrado, controle de acesso e locking.
 - Em producao: Postgres gerenciado/HA + PITR, External Secrets, TLS, multi-cluster
   com ApplicationSet, NetworkPolicies e alertas com roteamento real.
 

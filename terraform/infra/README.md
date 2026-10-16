@@ -179,8 +179,9 @@ O script gera `terraform.tfvars` com permissao 600 (ignorado pelo Git), uma
 senha MinIO aleatoria e a chave publica SSH do operador. Pode-se fornecer a
 chave com `MINIO_SSH_PUBKEY` ou a senha com `MINIO_ROOT_PASSWORD` antes de
 rodar. O CIDR e obtido do XML da rede libvirt, nao de uma constante do projeto.
-O Ingress gerado em `clusters/local/minio-console-ingress.yaml` tambem e local
-e ignorado pelo Git.
+O Ingress gerado em `terraform/infra/minio-console-ingress.yaml` tambem e local
+e ignorado pelo Git. O MinIO fica fora do cluster de proposito: ele simula a
+AWS para os backups do Postgres com wal-g no futuro.
 
 Depois do apply, a API S3 esta em `terraform output -raw minio_endpoint`; o
 console e `http://minio.localhost` quando o cluster Talos, Traefik e o Ingress

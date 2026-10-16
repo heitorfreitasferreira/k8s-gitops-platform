@@ -3,7 +3,6 @@ kind: Ingress
 metadata:
   name: todolist
 spec:
-  # k3d entrega o Traefik como ingress controller padrao.
   ingressClassName: traefik
   # Host definido por overlay (staging/production). Sem host, dois
   # Ingresses /* no mesmo LB disputariam o mesmo trafego.

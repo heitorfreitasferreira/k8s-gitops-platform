@@ -9,12 +9,12 @@ precisa de k6 instalado na maquina: a imagem `grafana/k6` traz o binario.
 ## Quando usar
 
 Fora do fluxo do Argo CD. E um teste manual, disparado de proposito para gerar
-evidencia. O cluster precisa estar no ar (`./bootstrap.sh`).
+evidencia. O cluster precisa estar no ar (`make up`).
 
 ## Rodar
 
 ```bash
-export KUBECONFIG=~/.kube/local-k3d.kubeconfig
+export KUBECONFIG=~/.kube/talos-kubeconfig
 kubectl apply -k loadtest/
 
 # acompanhar a carga
