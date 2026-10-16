@@ -14,7 +14,7 @@ e o chefe, os outros dois sao operarios. Cada caixa do desenho e um computador.
 flowchart TB
   subgraph host["Seu PC (Arch Linux) que vira um mini data center"]
     lb["libvirt/KVM: o locador que cria as salas"]
-    subgraph net["rede NAT virbr0, 192.168.122.0/24"]
+    subgraph net["rede NAT configurada no libvirt"]
       dns["dnsmasq .1: entrega o numero da sala pelo MAC"]
       cp["chefe (control-plane): talos-cp-1 .10"]
       w1["operario (worker): talos-worker-1 .11"]
@@ -67,7 +67,7 @@ resto da instalacao falha.
 flowchart TB
   fw["firewall do host (ufw): libera DHCP udp/67 e o forward da virbr0"]
   subgraph host["host Arch Linux"]
-    subgraph net["rede NAT default - virbr0 - 192.168.122.0/24"]
+    subgraph net["rede NAT detectada pelo setup-host.sh"]
       dnsmasq["dnsmasq .1"]
       cp["chefe: talos-cp-1 .10"]
       w1["operario: talos-worker-1 .11"]
@@ -129,27 +129,74 @@ flowchart LR
 ## Pre-requisitos no host
 
 - Pacotes: `libvirt`, `qemu-full`, `edk2-ovmf` (firmware UEFI).
-- O usuario no grupo `libvirt` para falar com `qemu:///system`:
-  `sudo usermod -aG libvirt $USER` (relogar depois).
-- Daemon ativo e a rede NAT padrao no ar:
-  `sudo systemctl enable --now libvirtd`
-  `sudo virsh net-autostart default`
-  `sudo virsh net-start default`
-- Pool de storage `default` definido e ativo (o libvirt nem sempre o cria):
-  `sudo virsh pool-define-as default dir --target /var/lib/libvirt/images`
-  `sudo virsh pool-build default`
-  `sudo virsh pool-start default`
-  `sudo virsh pool-autostart default`
-- Firmware UEFI em `/usr/share/edk2/x64/OVMF_CODE.4m.fd` (padrao no Arch).
-- Firewall do host (ufw) liberando o DHCP e o forward da `virbr0`. Sem isso as
-  VMs mandam o DHCP DISCOVER e o dnsmasq nao responde:
-  `sudo ufw allow in on virbr0 from 192.168.122.0/24 to any port 67 proto udp`
-  `sudo ufw route allow in on virbr0`
-  `sudo ufw route allow out on virbr0`
+- Libvirt/KVM ativo e permissao para acessar a URI libvirt escolhida. Para a
+  conexao de sistema, algumas distros pedem adicionar o usuario ao grupo
+  `libvirt` e iniciar o servico. A configuracao varia por distribuicao.
+- Uma rede libvirt NAT ativa com DHCP e um pool de storage ativo. O script
+  detecta a subnet, em vez de exigir que a rede se chame `default`.
+- Firmware UEFI OVMF para os nos Talos. O script procura localizacoes comuns;
+  `FIRMWARE_PATH` permite indicar outro caminho.
+- O firewall do host deve permitir DHCP e encaminhamento da bridge NAT. As
+  regras variam com a ferramenta e a subnet detectada. O preflight nao altera
+  firewall nem rede; consulte o administrador local se o DHCP falhar.
 
-A rede `default` do libvirt e a NAT em `virbr0` (`192.168.122.0/24`). As VMs
-entram nela com IP estatico pedido na interface (`.10` no control plane, `.11`
-e `.12` nos workers). Nada na LAN do host muda.
+### Setup portavel em outro host Linux
+
+O projeto nao deve depender do CIDR da rede, do IP do host na LAN nem de um
+caminho unico de firmware. O script `setup-host.sh` detecta a rede e o pool
+libvirt escolhidos, acha um firmware UEFI conhecido, verifica ferramentas e
+recursos, cria configuracao local e renderiza o Ingress com o IP derivado da
+rede. Nao instala pacotes, nao altera a rede/firewall e nao usa sudo.
+
+Requisito recomendado para subir o cluster completo (control plane, dois
+workers e MinIO): 8 CPUs, 16 GiB de RAM e 80 GiB livres no pool. O MinIO
+isolado precisa de 1 CPU, 2 GiB de RAM e 20 GiB de disco. Abaixo do recomendado
+o script avisa, mas deixa a decisao ao operador.
+
+Instale os pacotes de virtualizacao e firmware UEFI usando o gerenciador da
+sua distribuicao. O preflight identifica ferramentas ausentes. Exemplos:
+
+| Distribuicao | Pacotes adicionais para este Terraform |
+| --- | --- |
+| Arch Linux | `libvirt`, `qemu-full`, `edk2-ovmf`, `cdrtools` |
+| Debian/Ubuntu | `libvirt-daemon-system`, `qemu-system-x86`, `ovmf`, `genisoimage` |
+| Fedora | `libvirt`, `qemu-kvm`, `edk2-ovmf`, `genisoimage` |
+
+Garanta que o servico libvirt esta ativo, a rede NAT e o pool de storage estao
+ativos e o usuario tem permissao de conexao. Se usar nomes/URI diferentes dos
+defaults, exporte `LIBVIRT_URI`, `LIBVIRT_NETWORK` e `LIBVIRT_POOL`. Se o
+firmware nao estiver em um dos caminhos comuns, exporte `FIRMWARE_PATH`.
+
+```bash
+cd terraform/infra
+./setup-host.sh
+terraform init
+terraform plan
+terraform apply
+```
+
+O script gera `terraform.tfvars` com permissao 600 (ignorado pelo Git), uma
+senha MinIO aleatoria e a chave publica SSH do operador. Pode-se fornecer a
+chave com `MINIO_SSH_PUBKEY` ou a senha com `MINIO_ROOT_PASSWORD` antes de
+rodar. O CIDR e obtido do XML da rede libvirt, nao de uma constante do projeto.
+O Ingress gerado em `clusters/local/minio-console-ingress.yaml` tambem e local
+e ignorado pelo Git.
+
+Depois do apply, a API S3 esta em `terraform output -raw minio_endpoint`; o
+console e `http://minio.localhost` quando o cluster Talos, Traefik e o Ingress
+estiverem ativos. Enquanto isso, o console pode ser acessado diretamente em
+`http://<IP-MinIO>:9001`, usando o hostnum configurado. A API e o console
+permanecem na NAT do libvirt, sem publicacao na LAN.
+
+Para outra rede libvirt, o script detecta o CIDR mas reserva os host numbers
+10 para o primeiro control plane, 11 em diante para workers e 20 para MinIO.
+Confirme que esses enderecos cabem na subnet e nao conflitam com dispositivos
+existentes. Personalize `controlplane_hostnum_start`, `worker_hostnum_start` e
+`minio_hostnum` no `terraform.tfvars` local se necessario.
+
+As VMs entram na rede NAT detectada com enderecos fixados por reserva DHCP
+derivada do CIDR local (host numbers 10 em diante para Talos e 20 para MinIO).
+Nada na LAN do host muda.
 
 ## Imagem
 

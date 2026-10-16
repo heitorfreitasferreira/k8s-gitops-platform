@@ -1,16 +1,21 @@
 # Copie para terraform.tfvars e ajuste se necessario.
 
 cluster_name  = "talos"
-libvirt_uri   = "qemu:///system"
-network_cidr  = "192.168.122.0/24"
 talos_version = "1.13.3"
 
-# firmware_path padrão no Arch/Omarchy:
-# firmware_path = "/usr/share/edk2/x64/OVMF_CODE.4m.fd"
+# O script setup-host.sh detecta URI, rede, CIDR, pool, firmware, chave SSH e
+# gera terraform.tfvars local. Valores abaixo sao apenas referencia.
+# libvirt_uri  = "qemu:///system"
+# network_name = "default"
+# network_cidr = "<detectado da rede libvirt>"
+# firmware_path = "<detectado no host>"
+# minio_root_password = "<gerada pelo setup-host.sh>"
+# minio_ssh_pubkey = "<lida de ~/.ssh/*.pub>"
 
-# Control plane em .10, workers em .11 e .12 (defaults):
+# Enderecos sao derivados do CIDR detectado, usando host numbers reservados:
 # controlplane_hostnum_start = 10
 # worker_hostnum_start       = 11
+# minio_hostnum              = 20
 
 # Para trocar as extensoes da imagem, regenere o schematic na Image Factory e
 # aponte o ID aqui:

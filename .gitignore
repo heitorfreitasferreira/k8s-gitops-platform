@@ -9,3 +9,5 @@ kubeconfig*.yaml
 envs/*.env
 sealed-backup/
 .opencode/
+# Endpoints renderizados com o CIDR local da rede libvirt.
+/clusters/local/minio-console-ingress.yaml

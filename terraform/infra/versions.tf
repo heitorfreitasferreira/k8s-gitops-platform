@@ -16,6 +16,13 @@ terraform {
       source  = "siderolabs/talos"
       version = "0.11.0"
     }
+
+    # Cria o bucket no MinIO falando S3 com path-style. Pinado no 5.x, serie
+    # estavel conhecida; o 6.x mudou defaults de validacao de endpoint.
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
   }
 
   # Estado local por padrao (projeto de portfolio, um operador). Em time real,
@@ -36,3 +43,20 @@ provider "libvirt" {
 }
 
 provider "talos" {}
+
+# Aponta para o MinIO local com credenciais das variaveis. As validacoes de
+# conta/regiao sao desligadas porque o MinIO nao e a AWS real.
+provider "aws" {
+  access_key = var.minio_root_user
+  secret_key = var.minio_root_password
+  region     = "us-east-1"
+
+  s3_use_path_style           = true
+  skip_credentials_validation = true
+  skip_metadata_api_check     = true
+  skip_requesting_account_id  = true
+
+  endpoints {
+    s3 = "http://${cidrhost(var.network_cidr, var.minio_hostnum)}:9000"
+  }
+}
