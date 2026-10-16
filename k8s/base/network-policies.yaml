@@ -56,6 +56,14 @@ spec:
     - ports:
         - protocol: TCP
           port: 443
+    # Tracing: exporta OTLP/gRPC para o collector na namespace observability.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: observability
+      ports:
+        - protocol: TCP
+          port: 4317
     - to:
         - namespaceSelector:
             matchLabels:

@@ -30,14 +30,20 @@ spec:
         runAsNonRoot: true
         seccompProfile:
           type: RuntimeDefault
-        fsGroup: 999
+        # Best-effort: hostPath (local-path) NAO aplica fsGroup. O dono real do
+        # volume e 70:0, dai o runAsUser 70 no container.
+        fsGroup: 70
         fsGroupChangePolicy: OnRootMismatch
       containers:
         - name: postgres
           image: postgres:16-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685
           securityContext:
             runAsNonRoot: true
-            runAsUser: 999
+            # A variante alpine do postgres usa uid 70 (o Debian usa 999).
+            # O volume local-path nao recebe fsGroup (hostPath), entao o uid
+            # precisa bater com o dono de PGDATA (70:0) para o initdb escrever.
+            runAsUser: 70
+            runAsGroup: 70
             allowPrivilegeEscalation: false
             capabilities:
               drop: [ALL]
