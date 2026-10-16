@@ -151,6 +151,12 @@ Obrigatórios para o `bootstrap.sh`: `terraform` e `kubectl`. O modulo `terrafor
 <TRAEFIK_IP> staging.local prod.local argocd.local grafana.local hubble.local
 ```
 
+- Resolução de `.local`: o sufixo pertence ao mDNS. Se o sistema consulta o mDNS antes de `/etc/hosts`, os nomes acima nao resolvem mesmo com a linha presente. Confira com `getent hosts staging.local`. Se sair vazio, veja a ordem das fontes com `grep '^hosts:' /etc/nsswitch.conf` e coloque `files` em primeiro lugar:
+
+```bash
+sudo sed -i 's/^hosts:.*/hosts: files mymachines mdns_minimal [NOTFOUND=return] resolve myhostname dns/' /etc/nsswitch.conf
+```
+
 ## Reproducao (do zero)
 
 Execute o bootstrap depois de criar o cluster Talos e exportar o kubeconfig:
