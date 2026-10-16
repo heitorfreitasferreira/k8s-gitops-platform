@@ -53,6 +53,12 @@ locals {
         }
       }
     }),
+    yamlencode({
+      apiVersion = "v1alpha1"
+      kind       = "UserVolumeConfig"
+      name       = "local-path-provisioner"
+      volumeType = "directory"
+    }),
   ]
 }
 

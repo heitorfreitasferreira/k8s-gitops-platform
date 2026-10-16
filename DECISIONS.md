@@ -202,6 +202,12 @@ Formato: data + contexto + escolha + descarte. Sem cerimonia de ADR (1 decisao =
   `hostNetwork` + `NET_RAW`. Escolha: criar `metallb-system` por
   `kubectl_manifest` com o rotulo `privileged` antes do chart. Descarte: confiar
   no `create_namespace` do Helm (namespace sem rotulo, pods barrados).
+- 2026-10-16 · StorageClass `local-path` para PVCs do Talos. Contexto: Talos nao
+  fornece provisionador de volumes por padrao. Escolha: Rancher Local Path
+  Provisioner cria volumes locais em `/var/mnt/local-path-provisioner`, numa
+  UserVolume de diretorio no volume EPHEMERAL. `WaitForFirstConsumer` coloca o
+  PV no no que executa o Postgres. `Retain` preserva o diretorio quando o PVC
+  some. O volume nao replica dados e nao acompanha o pod para outro no.
 - 2026-10-15 · Teste de carga com k6 como Job no cluster. Contexto: o HPA existe
   mas faltava prova empirica do 2->N sob carga. Escolha: `loadtest/` roda
   `grafana/k6` como Job no namespace staging, alvo o Service `todolist`,

@@ -119,6 +119,32 @@ locals {
     args:
       - --kubelet-insecure-tls
   YAML
+
+  local_path_config = jsonencode({
+    nodePathMap = [{
+      node  = "DEFAULT_PATH_FOR_NON_LISTED_NODES"
+      paths = ["/var/mnt/local-path-provisioner"]
+    }]
+  })
+
+  local_path_helper_pod = yamlencode({
+    apiVersion = "v1"
+    kind       = "Pod"
+    metadata   = { name = "helper-pod", namespace = "local-path-storage" }
+    spec = {
+      priorityClassName = "system-node-critical"
+      tolerations = [{
+        key      = "node.kubernetes.io/disk-pressure"
+        operator = "Exists"
+        effect   = "NoSchedule"
+      }]
+      containers = [{
+        name            = "helper-pod"
+        image           = "docker.io/library/busybox:1.36.1@sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662"
+        imagePullPolicy = "IfNotPresent"
+      }]
+    }
+  })
 }
 
 resource "random_password" "app" {
@@ -142,7 +168,13 @@ resource "random_password" "grafana" {
 
 resource "kubernetes_namespace" "workloads" {
   for_each = toset(["todolist-staging", "todolist-production", "observability"])
-  metadata { name = each.key }
+  metadata {
+    name = each.key
+    labels = each.key == "observability" ? {} : {
+      "app.kubernetes.io/part-of" = "todolist"
+      environment                 = trimprefix(each.key, "todolist-")
+    }
+  }
 }
 
 resource "kubernetes_secret" "todolist_auth" {
@@ -187,6 +219,204 @@ resource "kubernetes_secret" "grafana_admin" {
   }
   type       = "Opaque"
   depends_on = [kubernetes_namespace.workloads]
+}
+
+resource "kubectl_manifest" "local_path_namespace" {
+  yaml_body = yamlencode({
+    apiVersion = "v1"
+    kind       = "Namespace"
+    metadata = {
+      name = "local-path-storage"
+      labels = {
+        "pod-security.kubernetes.io/enforce" = "privileged"
+        "pod-security.kubernetes.io/audit"   = "privileged"
+        "pod-security.kubernetes.io/warn"    = "privileged"
+      }
+    }
+  })
+  depends_on = [helm_release.cilium]
+}
+
+resource "kubectl_manifest" "local_path_service_account" {
+  yaml_body = yamlencode({
+    apiVersion = "v1"
+    kind       = "ServiceAccount"
+    metadata = {
+      name      = "local-path-provisioner-service-account"
+      namespace = "local-path-storage"
+    }
+  })
+  depends_on = [kubectl_manifest.local_path_namespace]
+}
+
+resource "kubectl_manifest" "local_path_role" {
+  yaml_body = yamlencode({
+    apiVersion = "rbac.authorization.k8s.io/v1"
+    kind       = "Role"
+    metadata = {
+      name      = "local-path-provisioner-role"
+      namespace = "local-path-storage"
+    }
+    rules = [{
+      apiGroups = [""]
+      resources = ["pods"]
+      verbs     = ["get", "list", "watch", "create", "patch", "update", "delete"]
+    }]
+  })
+  depends_on = [kubectl_manifest.local_path_namespace]
+}
+
+resource "kubectl_manifest" "local_path_cluster_role" {
+  yaml_body = yamlencode({
+    apiVersion = "rbac.authorization.k8s.io/v1"
+    kind       = "ClusterRole"
+    metadata   = { name = "local-path-provisioner-role" }
+    rules = [
+      {
+        apiGroups = [""]
+        resources = ["nodes", "persistentvolumeclaims", "configmaps", "pods", "pods/log"]
+        verbs     = ["get", "list", "watch"]
+      },
+      {
+        apiGroups = [""]
+        resources = ["persistentvolumes"]
+        verbs     = ["get", "list", "watch", "create", "patch", "update", "delete"]
+      },
+      {
+        apiGroups = [""]
+        resources = ["events"]
+        verbs     = ["create", "patch"]
+      },
+      {
+        apiGroups = ["storage.k8s.io"]
+        resources = ["storageclasses"]
+        verbs     = ["get", "list", "watch"]
+      }
+    ]
+  })
+  depends_on = [kubectl_manifest.local_path_namespace]
+}
+
+resource "kubectl_manifest" "local_path_role_binding" {
+  yaml_body = yamlencode({
+    apiVersion = "rbac.authorization.k8s.io/v1"
+    kind       = "RoleBinding"
+    metadata = {
+      name      = "local-path-provisioner-bind"
+      namespace = "local-path-storage"
+    }
+    roleRef = {
+      apiGroup = "rbac.authorization.k8s.io"
+      kind     = "Role"
+      name     = "local-path-provisioner-role"
+    }
+    subjects = [{
+      kind      = "ServiceAccount"
+      name      = "local-path-provisioner-service-account"
+      namespace = "local-path-storage"
+    }]
+  })
+  depends_on = [kubectl_manifest.local_path_role, kubectl_manifest.local_path_service_account]
+}
+
+resource "kubectl_manifest" "local_path_cluster_role_binding" {
+  yaml_body = yamlencode({
+    apiVersion = "rbac.authorization.k8s.io/v1"
+    kind       = "ClusterRoleBinding"
+    metadata   = { name = "local-path-provisioner-bind" }
+    roleRef = {
+      apiGroup = "rbac.authorization.k8s.io"
+      kind     = "ClusterRole"
+      name     = "local-path-provisioner-role"
+    }
+    subjects = [{
+      kind      = "ServiceAccount"
+      name      = "local-path-provisioner-service-account"
+      namespace = "local-path-storage"
+    }]
+  })
+  depends_on = [kubectl_manifest.local_path_cluster_role, kubectl_manifest.local_path_service_account]
+}
+
+resource "kubectl_manifest" "local_path_config" {
+  yaml_body = yamlencode({
+    apiVersion = "v1"
+    kind       = "ConfigMap"
+    metadata = {
+      name      = "local-path-config"
+      namespace = "local-path-storage"
+    }
+    data = {
+      "config.json"    = local.local_path_config
+      setup            = "#!/bin/sh\nset -eu\nmkdir -m 0777 -p \"$VOL_DIR\""
+      teardown         = "#!/bin/sh\nset -eu\nrm -rf \"$VOL_DIR\""
+      "helperPod.yaml" = local.local_path_helper_pod
+    }
+  })
+  depends_on = [kubectl_manifest.local_path_namespace]
+}
+
+resource "kubectl_manifest" "local_path_storage_class" {
+  yaml_body = yamlencode({
+    apiVersion = "storage.k8s.io/v1"
+    kind       = "StorageClass"
+    metadata = {
+      name = "local-path"
+      annotations = {
+        "storageclass.kubernetes.io/is-default-class" = "true"
+      }
+    }
+    provisioner       = "rancher.io/local-path"
+    volumeBindingMode = "WaitForFirstConsumer"
+    reclaimPolicy     = "Retain"
+  })
+  depends_on = [kubectl_manifest.local_path_namespace]
+}
+
+resource "kubectl_manifest" "local_path_deployment" {
+  yaml_body = yamlencode({
+    apiVersion = "apps/v1"
+    kind       = "Deployment"
+    metadata = {
+      name      = "local-path-provisioner"
+      namespace = "local-path-storage"
+    }
+    spec = {
+      replicas = 1
+      selector = { matchLabels = { app = "local-path-provisioner" } }
+      template = {
+        metadata = { labels = { app = "local-path-provisioner" } }
+        spec = {
+          serviceAccountName = "local-path-provisioner-service-account"
+          containers = [{
+            name            = "local-path-provisioner"
+            image           = "docker.io/rancher/local-path-provisioner:v0.0.31@sha256:80496fdeb307541007621959aa13aed41d31db9cd2dc4167c19833e0bfa3878c"
+            imagePullPolicy = "IfNotPresent"
+            command         = ["local-path-provisioner", "--debug", "start", "--config", "/etc/config/config.json"]
+            env = [
+              {
+                name = "POD_NAMESPACE"
+                valueFrom = {
+                  fieldRef = { fieldPath = "metadata.namespace" }
+                }
+              },
+              { name = "CONFIG_MOUNT_PATH", value = "/etc/config/" }
+            ]
+            volumeMounts = [{ name = "config-volume", mountPath = "/etc/config/" }]
+          }]
+          volumes = [{
+            name      = "config-volume"
+            configMap = { name = "local-path-config" }
+          }]
+        }
+      }
+    }
+  })
+  depends_on = [
+    kubectl_manifest.local_path_config,
+    kubectl_manifest.local_path_role_binding,
+    kubectl_manifest.local_path_cluster_role_binding
+  ]
 }
 
 # ---------------------------------------------------------------------------
