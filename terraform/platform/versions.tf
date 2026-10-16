@@ -16,6 +16,14 @@ terraform {
       source  = "alekc/kubectl"
       version = "2.4.1"
     }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.38"
+    }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.7"
+    }
   }
 
   # Estado local por padrao (projeto de portfolio, um operador). Em time real,
@@ -39,4 +47,8 @@ provider "helm" {
 provider "kubectl" {
   config_path      = pathexpand(var.kubeconfig_path)
   load_config_file = true
+}
+
+provider "kubernetes" {
+  config_path = pathexpand(var.kubeconfig_path)
 }

@@ -18,10 +18,3 @@ spec:
     # um commit ruim quebrar os dois envs ao mesmo tempo).
     syncOptions:
       - CreateNamespace=true
-  ignoreDifferences:
-    - group: ""
-      kind: Secret
-      jsonPointers:
-        - /data
-      managedFieldsManagers:
-        - sealed-secrets-controller

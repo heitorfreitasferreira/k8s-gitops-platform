@@ -8,10 +8,7 @@ spec:
     requests:
       storage: 1Gi
 ---
-# ATENCAO: o Secret postgres-credentials NAO vive aqui.
-# Ele e entregue por SealedSecret em cada overlay
-# (k8s/overlays/<env>/sealed-postgres.yaml) e descriptografado
-# pelo controller so dentro do cluster. Nada em texto claro no Git.
+# O Secret postgres-credentials e provisionado pelo modulo Terraform platform.
 apiVersion: apps/v1
 kind: Deployment
 metadata:

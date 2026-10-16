@@ -11,8 +11,8 @@
 #   4. Argo CD                                   -> GitOps, atras do Traefik.
 #   5. metrics-server                            -> kubectl top.
 #
-# O Terraform instala os componentes; os workloads continuam no Argo CD. Aqui
-# nao entra manifest de aplicacao, para nao criar uma segunda fonte de verdade.
+# O Terraform instala os componentes e cria os secrets de workload. O Argo CD
+# continua como fonte de verdade dos manifests da aplicacao.
 
 locals {
   # Le o kubeconfig do infra. Serve para os providers e para descobrir o
@@ -119,6 +119,74 @@ locals {
     args:
       - --kubelet-insecure-tls
   YAML
+}
+
+resource "random_password" "app" {
+  for_each         = toset(["staging-admin", "staging-session", "staging-cleanup", "production-admin", "production-session", "production-cleanup"])
+  length           = 48
+  special          = false
+  override_special = ""
+}
+
+resource "random_password" "postgres" {
+  for_each         = toset(["staging", "production"])
+  length           = 48
+  special          = false
+  override_special = ""
+}
+
+resource "random_password" "grafana" {
+  length  = 32
+  special = false
+}
+
+resource "kubernetes_namespace" "workloads" {
+  for_each = toset(["todolist-staging", "todolist-production", "observability"])
+  metadata { name = each.key }
+}
+
+resource "kubernetes_secret" "todolist_auth" {
+  for_each = toset(["staging", "production"])
+  metadata {
+    name      = "todolist-auth"
+    namespace = "todolist-${each.key}"
+  }
+  data = {
+    ADMIN_USER     = "admin"
+    ADMIN_PASSWORD = random_password.app["${each.key}-admin"].result
+    SESSION_KEY    = random_password.app["${each.key}-session"].result
+    CLEANUP_TOKEN  = random_password.app["${each.key}-cleanup"].result
+  }
+  type       = "Opaque"
+  depends_on = [kubernetes_namespace.workloads]
+}
+
+resource "kubernetes_secret" "postgres_credentials" {
+  for_each = toset(["staging", "production"])
+  metadata {
+    name      = "postgres-credentials"
+    namespace = "todolist-${each.key}"
+  }
+  data = {
+    POSTGRES_USER     = "todolist"
+    POSTGRES_PASSWORD = random_password.postgres[each.key].result
+    POSTGRES_DB       = "todolist"
+  }
+  type       = "Opaque"
+  depends_on = [kubernetes_namespace.workloads]
+}
+
+resource "kubernetes_secret" "grafana_admin" {
+  metadata {
+    name      = "grafana-admin"
+    namespace = "observability"
+  }
+  data = {
+    "admin-user"     = "admin"
+    "admin-password" = random_password.grafana.result
+  }
+  type       = "Opaque"
+  depends_on = [kubernetes_namespace.workloads]
 }
 
 # ---------------------------------------------------------------------------

@@ -44,8 +44,7 @@ fonte de verdade.
 Trocar a cor de um env = 1 linha (`APP_COLOR`) no `configMapGenerator` do
 overlay + push: o hash do ConfigMap muda, o kustomize reescreve o `envFrom` do
 Deployment e o rollout acontece sozinho (sem restart manual).
-Login app: `admin` + senha do SealedSecret (ver `/k-secrets` no opencode).
-Login Grafana: `admin` + senha em `envs/grafana-observability.env` (local, gitignored).
+Login app: `admin` + senha gerada no Terraform state. Login Grafana: `admin` + senha gerada no Terraform state.
 
 Acesso **sem porta** (`http://<host>` e `https://<host>`): o LB publica 80 e 443.
 O TLS é terminado no Ingress com o certificado self-signed padrão do Traefik
@@ -80,12 +79,11 @@ Stack entregue via Argo CD (Helm charts pinados), tudo em `observability`:
 | `clusters/local/k3d-config.yaml` | cluster criado por codigo |
 | `clusters/local/argocd/` | install + projects + applications do Argo CD |
 | `clusters/local/argocd/argocd-ui-ingress.yaml` | UI do Argo no Ingress |
-| `clusters/local/sealed-secrets/` | controller Sealed Secrets (vendorizado, digest pinado) + cert publico |
-| `clusters/local/observability/` | ServiceMonitors, dashboards e secret do Grafana |
+| `clusters/local/observability/` | ServiceMonitors e dashboards |
 | `k8s/base + k8s/overlays/staging|production/` | manifests da app (fonte unica: nao duplicar no repo da app) |
-| `envs/*.env.example` | modelo tangivel dos secrets (o `.env` preenchido nunca e commitado) |
+| `envs/*.env.example` | exemplos sem credenciais |
 | `../todolist-app/.github/workflows/` | CI por branch (staging->overlay staging, production->production) |
-| `terraform/` | provisionamento do cluster (k3d) por Terraform; workloads seguem no Argo CD |
+| `terraform/platform/` | plataforma, namespaces e secrets Kubernetes; workloads seguem no Argo CD |
 | `loadtest/` | teste de carga k6 como Job (prova do HPA) |
 | `docs/` | logs, dumps e prints de navegador |
 
@@ -131,11 +129,10 @@ Gate: `docker info` verde antes de continuar.
 |---|---|---|
 | `k3d` | v5.9.0 (cria k3s v1.35) | `curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh \| bash` |
 | `kubectl` | v1.37 (skew ±1 do k3s vale) | https://kubernetes.io/docs/tasks/tools/ |
-| `kubeseal` | 0.39.1 (casa com o controller vendorizado) | tarball do release no `~/.local/bin` |
 | `kustomize` | v5.7.1 | tarball do release no `~/.local/bin` |
 | `gh` | opcional (monitorar CI/PRs) | https://cli.github.com/manual/installation |
 
-Obrigatórios para o `bootstrap.sh`: `k3d`, `kubectl` e `kubeseal`.
+Obrigatórios para o `bootstrap.sh`: `terraform` e `kubectl`. O modulo `terraform/infra` deve criar o cluster Talos e o kubeconfig antes da execucao.
 (`kustomize` é usado pelo CI e pela validação local.)
 
 ### 4. GitHub: repos, token e acesso
@@ -148,8 +145,7 @@ Obrigatórios para o `bootstrap.sh`: `k3d`, `kubectl` e `kubeseal`.
 2. **Secret `GITOPS_BUMP_TOKEN`** no repo do app: um *fine-grained PAT* com
    **Contents: read+write** no repo `k8s-gitops-platform`. É com ele que o job de
    bump commita o digest da imagem aqui. Se expirar, a CI falha fechado.
-3. **SSH no GitHub** (`ssh -T git@github.com` ok) — o caminho `--reseal` do
-   `bootstrap.sh` dá `push` neste repo.
+3. **Acesso ao GitHub** para o Argo CD clonar este repositorio.
 4. **GHCR público**: as imagens precisam ser públicas, pois o kubelet puxa
    **sem credencial** (não há `imagePullSecret` em nenhum manifest). Após o
    primeiro build, verifique a visibilidade do pacote em
@@ -165,19 +161,12 @@ Obrigatórios para o `bootstrap.sh`: `k3d`, `kubectl` e `kubeseal`.
 
 ## Reproducao (do zero)
 
-Forma curta (recomendada) — um comando, repete do zero:
+Execute o bootstrap depois de criar o cluster Talos e exportar o kubeconfig:
 
 ```bash
-export KUBECONFIG=~/.kube/local-k3d.kubeconfig
-./bootstrap.sh                 # cluster -> Argo -> secrets -> apps -> espera Synced/Healthy
-# ./bootstrap.sh --reseal       # forca re-selar os secrets com o cert atual
-# ./bootstrap.sh teardown       # derruba o cluster
+export KUBECONFIG=~/.kube/talos-kubeconfig
+./bootstrap.sh                 # aplica Terraform platform e registra as Applications
 ```
-
-O script resolve os secrets automaticamente: se existir `sealed-backup/key.yaml`
-(backup local da chave do controller, **nunca versionado**) ele restaura a chave e
-mantem os selos do Git; caso contrario, cria os `envs/*.env` sinteticos que faltarem
-e **re-sela**, commitando o resultado (o Argo le do Git).
 
 <details><summary>Passo a passo manual (equivalente)</summary>
 
@@ -191,9 +180,7 @@ kubectl -n argocd patch deployment argocd-server --type=json \
 kubectl apply -f clusters/local/argocd/argocd-ui-ingress.yaml
 kubectl apply -f clusters/local/argocd/project.yaml
 kubectl apply -f clusters/local/argocd/project-observability.yaml
-kubectl apply -f clusters/local/argocd/application-sealed.yaml
-kubectl -n kube-system rollout status deployment/sealed-secrets-controller
-# ... secrets (ver bootstrap.sh) ...
+# Terraform platform cria os Secrets antes de registrar as Applications.
 for app in staging production kube-prometheus-stack loki alloy observability; do
   kubectl apply -f clusters/local/argocd/application-$app.yaml
 done

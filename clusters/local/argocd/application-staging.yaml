@@ -19,12 +19,3 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
-    # O Secret gerado pelo controller nao esta no Git: sem isso o Argo
-    # entraria em OutOfSync eterno brigando com o controller.
-  ignoreDifferences:
-    - group: ""
-      kind: Secret
-      jsonPointers:
-        - /data
-      managedFieldsManagers:
-        - sealed-secrets-controller

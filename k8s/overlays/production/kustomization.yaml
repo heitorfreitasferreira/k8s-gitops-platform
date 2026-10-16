@@ -4,9 +4,6 @@ namespace: todolist-production
 resources:
   - ../../base
   - namespace.yaml
-  # SealedSecrets (gerados com kubeseal --scope strict, um por env):
-  - sealed-postgres.yaml
-  - sealed-auth.yaml
 patches:
   - path: ingress-patch.yaml
     target:

@@ -24,10 +24,14 @@ Formato: data + contexto + escolha + descarte. Sem cerimonia de ADR (1 decisao =
   promocao; Git Flow seria pesado para 1 app. Escolha: `staging` = default,
   `production` protegida (sem push direto, PR so de `staging`/`hotfix/*`,
   CI verde + approval + linear). Descarte: trunk-based puro (sem gate de prod).
-- 2026-09-09 · Sealed Secrets, nao ESO. Contexto: k3d descartavel, sem Vault/AWS.
-  Escolha: controller vendorizado (digest pinado) via Argo + `kubeseal --scope strict`
-  + `.env.example` tangivel + `/k-secrets` (opencode) como runbook. Descarte: ESO
-  (exige provedor externo), Secret em claro (CHANGEME aposentado).
+- 2026-10-16 · Secrets gerados pelo Terraform, sem Sealed Secrets. Contexto:
+  o cluster Talos e provisionado pelo Terraform e nao depende de um provedor
+  externo de secrets. Escolha: `random_password` gera credenciais e
+  `kubernetes_secret` cria os Secrets de staging, production e Grafana. O state
+  Terraform contem os valores em claro, mesmo com os atributos marcados como
+  sensiveis. Em uso real, o state precisa de backend cifrado, controle de acesso
+  e locking. Descarte: Sealed Secrets (chave adicional e ciclo de reseal) e
+  External Secrets Operator (requer um provedor externo).
 - 2026-09-09 · 1 volume projected, nao 2 mounts. Contexto: app le credenciais de
   arquivos no mesmo `SECRETS_DIR`; 2 volumeMounts no mesmo path esconderiam um.
   Escolha: `projected` com `items:` renomeando `POSTGRES_*` -> `DB_*`.
@@ -120,7 +124,7 @@ Formato: data + contexto + escolha + descarte. Sem cerimonia de ADR (1 decisao =
 - 2026-09-11 · CI do repo GitOps (`validate`): `kustomize build` + `kubeconform`
   + grep de segredos + gitleaks. Contexto: o Argo aplica o que esta no Git;
   validar antes evita `OutOfSync`/erro de schema na reconciliacao.
-- 2026-09-11 · `bootstrap.sh` com restore ou reseal. Contexto: sealed secrets
+- 2026-09-11 · `bootstrap.sh` com restore ou reseal (decisao substituida em 2026-10-16). Contexto: sealed secrets
   sao cluster-bound; em cluster novo os selos do Git ficam indecifraveis.
   Escolha: restaura a chave do backup local (mantem os selos) ou, sem backup,
   cria os `.env` sinteticos e re-sela, commitando. Descartado: versionar a chave
@@ -146,7 +150,7 @@ Formato: data + contexto + escolha + descarte. Sem cerimonia de ADR (1 decisao =
   Contexto: a senha e gerada no install e muda a cada cluster; so aparecia no
   output do bootstrap. Escolha: `bootstrap.sh` grava `envs/argocd.env` (gitignored,
   como o do Grafana). Evolucao futura (Opcao B): senha deterministica num
-  SealedSecret (`argocd-secret` com `admin.password` bcrypt) para ser gerida em Git.
+  Secret gerido fora do Git para `argocd-secret` com `admin.password` bcrypt.
 - 2026-09-11 · APP_COLOR via `configMapGenerator` (hash no nome). Contexto: trocar a
   cor mudava o ConfigMap, mas sem rollout o env do container nao atualiza (envFrom
   so injeta na criacao do pod) — a cor so mudava com restart manual. Escolha:

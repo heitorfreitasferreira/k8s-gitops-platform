@@ -12,10 +12,6 @@ spec:
       namespace: todolist-staging
     - server: https://kubernetes.default.svc
       namespace: todolist-production
-    # kube-system recebe o controller do Sealed Secrets (ClusterRole e do
-    # proprio controller vendorizado, nao da app).
-    - server: https://kubernetes.default.svc
-      namespace: kube-system
   clusterResourceWhitelist:
     - group: ""
       kind: Namespace
@@ -25,9 +21,7 @@ spec:
       kind: ClusterRole
     - group: rbac.authorization.k8s.io
       kind: ClusterRoleBinding
-  # RBAC/Secret/SealedSecret ficam no GitOps de proposito (allowlist
-  # explicita em vez de */*): sem eles o sync nega os proprios manifests.
-  # ClusterRole/Binding da APP sao proibidos (so os do controller).
+  # RBAC e Secret ficam no GitOps de proposito (allowlist explicita).
   namespaceResourceWhitelist:
     - group: ""
       kind: ServiceAccount
@@ -63,5 +57,3 @@ spec:
       kind: Role
     - group: rbac.authorization.k8s.io
       kind: RoleBinding
-    - group: bitnami.com
-      kind: SealedSecret

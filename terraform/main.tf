@@ -7,8 +7,8 @@ locals {
   kubeconfig  = pathexpand(var.kubeconfig_path)
 }
 
-# O cluster e a unica parte que o Terraform gerencia. Os workloads (app,
-# observabilidade, sealed-secrets) continuam no Git e sao entregues pelo Argo
+# O cluster e a unica parte que este modulo gerencia. Os workloads (app e
+# observabilidade) continuam no Git e sao entregues pelo Argo
 # CD: o Terraform nao duplica manifests de aplicacao, para nao criar uma segunda
 # fonte de verdade.
 resource "null_resource" "cluster" {
