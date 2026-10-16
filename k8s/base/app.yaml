@@ -22,6 +22,8 @@ spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001
+        # emptyDir (metrics, /tmp) herda o grupo: garante escrita por 10001.
+        fsGroup: 10001
         seccompProfile:
           type: RuntimeDefault
       # O gunicorn sobe o app e roda create_all() no import: sem o Postgres de
@@ -79,6 +81,10 @@ spec:
             # prometheus-client multiprocess escreve arquivos aqui.
             - name: metrics
               mountPath: /tmp/prometheus-multiproc
+            # readOnlyRootFilesystem: /tmp precisa ser um volume gravavel; o
+            # gunicorn cria o WorkerTmp ali.
+            - name: tmp
+              mountPath: /tmp
             - name: service-account
               mountPath: /var/run/secrets/kubernetes.io/serviceaccount
               readOnly: true
@@ -127,6 +133,8 @@ spec:
                     - key: CLEANUP_TOKEN
                       path: CLEANUP_TOKEN
         - name: metrics
+          emptyDir: {}
+        - name: tmp
           emptyDir: {}
         - name: service-account
           projected:
