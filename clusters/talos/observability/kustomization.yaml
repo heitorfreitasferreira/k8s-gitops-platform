@@ -4,6 +4,7 @@ kind: Kustomization
 # (sidecar do Grafana).
 resources:
   - servicemonitors.yaml
+  - prometheusrules.yaml
 generatorOptions:
   labels:
     grafana_dashboard: "1" # sidecar do Grafana auto-carrega este label

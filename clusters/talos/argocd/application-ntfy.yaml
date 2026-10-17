@@ -1,0 +1,73 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ntfy
+  namespace: argocd
+  annotations:
+    # O Alertmanager (kube-prometheus-stack) entrega os alertas aqui.
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: observability
+  source:
+    repoURL: https://repo.helmforge.dev
+    chart: ntfy
+    targetRevision: 1.2.3
+    helm:
+      releaseName: ntfy
+      values: |
+        ntfy:
+          baseUrl: "http://ntfy.local"
+          # Sem acesso anonimo. O usuario `alertmanager` e o unico com escrita
+          # no topico, e autentica por token (nao por senha).
+          authDefaultAccess: "deny-all"
+          # Usuario provisionado no boot. O hash e de uma senha descartavel,
+          # nunca usada: a autenticacao do Alertmanager e por token, declarado
+          # em auth-tokens (NTFY_AUTH_TOKENS, lido do Secret).
+          extraConfig: |
+            auth-users:
+              - "alertmanager:$2a$10$8oXuXlOmQxUzNBm59/E8he5sayOgVl8Nww7J5Pd0.s3gC4Ot7g7/m:user"
+            auth-access:
+              - "alertmanager:todolist-alerts:rw"
+          extraEnv:
+            - name: NTFY_AUTH_TOKENS
+              valueFrom:
+                secretKeyRef:
+                  name: ntfy-alertmanager
+                  key: auth-tokens
+          enableMetrics: true
+        persistence:
+          enabled: true
+          storageClass: local-path
+          size: 1Gi
+        ingress:
+          enabled: true
+          ingressClassName: traefik
+          hosts:
+            - host: ntfy.local
+              paths:
+                - path: /
+                  pathType: Prefix
+          tls:
+            - hosts:
+                - ntfy.local
+        metrics:
+          serviceMonitor:
+            enabled: true
+        resources:
+          requests: { cpu: 10m, memory: 32Mi }
+          limits: { cpu: 200m, memory: 128Mi }
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 10
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 5m

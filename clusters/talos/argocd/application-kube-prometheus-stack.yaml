@@ -13,16 +13,49 @@ spec:
       releaseName: kube-prometheus-stack
       values: |
         alertmanager:
-          enabled: false # sem Alertmanager: foco em logs+metricas (ver DECISIONS)
+          enabled: true
+          config:
+            global:
+              resolve_timeout: 5m
+            route:
+              receiver: ntfy
+              group_by: ["alertname", "namespace"]
+              group_wait: 10s
+              group_interval: 1m
+              repeat_interval: 1h
+            receivers:
+              - name: ntfy
+                webhook_configs:
+                  - url: http://ntfy-ntfy.observability.svc.cluster.local/todolist-alerts
+                    send_resolved: true
+                    http_config:
+                      authorization:
+                        type: Bearer
+                        # Token do Secret ntfy-alertmanager, montado pelo
+                        # alertmanagerSpec.secrets. Nao fica no config versionado.
+                        credentials_file: /etc/alertmanager/secrets/ntfy-alertmanager/token
+              # O chart deixa uma rota `Watchdog` apontando para este receiver
+              # (no-op). Precisa existir porque a lista de receivers substitui
+              # a default inteira.
+              - name: "null"
+          alertmanagerSpec:
+            secrets:
+              - ntfy-alertmanager
+            resources:
+              requests: { cpu: 10m, memory: 32Mi }
+              limits: { cpu: 100m, memory: 128Mi }
         defaultRules:
-          create: false # sem Alertmanager nao ha destino para os alertas
+          create: false # as regras proprias vivem em clusters/talos/observability
         prometheus:
           prometheusSpec:
             retention: 6h
-            # Selecionar TODOS os ServiceMonitors do cluster (nao so os do release).
+            # Selecionar TODOS os ServiceMonitors/PrometheusRules do cluster
+            # (nao so os do release).
             serviceMonitorSelectorNilUsesHelmValues: false
             serviceMonitorNamespaceSelector: {}
             podMonitorSelectorNilUsesHelmValues: false
+            ruleSelectorNilUsesHelmValues: false
+            ruleNamespaceSelector: {}
             resources:
               # Limits dimensionados por uso real medido (kubectl top):
               # Prometheus ~850Mi, Grafana ~750Mi em regime. ~1.8x de folga.

@@ -224,6 +224,26 @@ resource "kubernetes_secret" "grafana_admin" {
   depends_on = [kubernetes_namespace.workloads]
 }
 
+resource "random_password" "ntfy_token" {
+  length  = 48
+  special = false
+}
+
+resource "kubernetes_secret" "ntfy_alertmanager" {
+  metadata {
+    name      = "ntfy-alertmanager"
+    namespace = "observability"
+  }
+  data = {
+    # ntfy le NTFY_AUTH_TOKENS no formato "<usuario>:<token>".
+    "auth-tokens" = "alertmanager:${random_password.ntfy_token.result}"
+    # O Alertmanager le so o token, no header Authorization: Bearer.
+    "token" = random_password.ntfy_token.result
+  }
+  type       = "Opaque"
+  depends_on = [kubernetes_namespace.workloads]
+}
+
 resource "kubectl_manifest" "local_path_namespace" {
   yaml_body = yamlencode({
     apiVersion = "v1"
@@ -577,6 +597,7 @@ resource "kubectl_manifest" "argocd_applications" {
     "application-alloy",
     "application-tempo",
     "application-otel-collector",
+    "application-ntfy",
     "application-observability",
     "application-hubble",
   ])
@@ -588,6 +609,7 @@ resource "kubectl_manifest" "argocd_applications" {
     kubernetes_secret.todolist_auth,
     kubernetes_secret.postgres_credentials,
     kubernetes_secret.grafana_admin,
+    kubernetes_secret.ntfy_alertmanager,
   ]
 }
 

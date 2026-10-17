@@ -1,0 +1,35 @@
+# Regras proprias do projeto. O Prometheus do kube-prometheus-stack seleciona
+# todos os PrometheusRules do cluster (ruleSelectorNilUsesHelmValues: false).
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: todolist-alertas
+  labels:
+    app.kubernetes.io/part-of: todolist
+spec:
+  groups:
+    - name: todolist.disponibilidade
+      rules:
+        # Disponibilidade: nenhum target da app responde ao scrape.
+        - alert: TodoListAppDown
+          expr: up{namespace=~"todolist-.*"} == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "App fora do ar em {{ $labels.namespace }}"
+            description: "O Prometheus nao consegue raspar o /metrics (target down)."
+    - name: todolist.pipeline
+      rules:
+        # Alerta de teste sempre ativo. Prova que o caminho
+        # Prometheus -> Alertmanager -> ntfy esta ligado ponta a ponta.
+        # (Nao se chama Watchdog de proposito: o chart do kube-prometheus-stack
+        # roteia esse nome para o receiver "null".)
+        - alert: TodoListPipelineTest
+          expr: vector(1)
+          for: 0m
+          labels:
+            severity: none
+          annotations:
+            summary: "Alerta de teste do caminho de alertas"
+            description: "Sempre ativo de proposito. Usado para validar a entrega no ntfy."
