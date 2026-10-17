@@ -62,6 +62,10 @@ resource "libvirt_cloudinit_disk" "minio" {
     runcmd:
       # Guest agent primeiro: sem ele o libvirt nao enxerga IP da VM.
       - [sh, -xc, "apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq qemu-guest-agent && systemctl enable --now qemu-guest-agent"]
+      # node_exporter: metricas de host desta VM (CPU, memoria, disco, rede) para
+      # o dashboard "VMs / Hosts" e os alertas de node. Escuta em todas as
+      # interfaces (o Prometheus do cluster raspa <ip>:9100 pela rede NAT).
+      - [sh, -xc, "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq prometheus-node-exporter && sed -i 's|^ARGS=.*|ARGS=\"--web.listen-address=:9100\"|' /etc/default/prometheus-node-exporter && systemctl enable --now prometheus-node-exporter"]
       - [sh, -xc, "cd /tmp && curl -fsSL -o minio ${local.minio_binary_url} && curl -fsSL -o minio.sha256sum ${local.minio_checksum_url} && test \"$(sha256sum minio | cut -d' ' -f1)\" = \"$(cut -d' ' -f1 minio.sha256sum)\" && install -o root -g root -m 0755 minio /usr/local/bin/minio && rm -f minio minio.sha256sum"]
       - [sh, -xc, "id -u minio-user >/dev/null 2>&1 || useradd -r -m -s /usr/sbin/nologin minio-user"]
       - [sh, -xc, "mkdir -p /data && chown minio-user:minio-user /data"]

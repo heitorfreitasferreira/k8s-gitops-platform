@@ -33,3 +33,46 @@ spec:
           annotations:
             summary: "Alerta de teste do caminho de alertas"
             description: "Sempre ativo de proposito. Usado para validar a entrega no ntfy."
+    - name: nodes
+      rules:
+        # NodeDown: o node-exporter de uma VM parou de responder.
+        - alert: NodeDown
+          expr: up{job=~"node-exporter|minio-node"} == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "VM fora do ar: {{ $labels.instance }}"
+            description: "O node-exporter desta VM nao responde ao scrape ha mais de 2 minutos."
+        # Disco acima de 80% em um filesystem real.
+        - alert: NodeDiskPressure
+          expr: >-
+            (1 - node_filesystem_avail_bytes{job=~"node-exporter|minio-node",device!="none",fstype!~"tmpfs|overlay|squashfs|ramfs"}
+                 / node_filesystem_size_bytes{job=~"node-exporter|minio-node",device!="none",fstype!~"tmpfs|overlay|squashfs|ramfs"}) > 0.8
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Disco acima de 80% em {{ $labels.instance }} ({{ $labels.mountpoint }})"
+            description: "O filesystem {{ $labels.mountpoint }} passou de 80% de uso."
+        # Memoria acima de 85%.
+        - alert: NodeMemoryHigh
+          expr: >-
+            (1 - node_memory_MemAvailable_bytes{job=~"node-exporter|minio-node"}
+                 / node_memory_MemTotal_bytes{job=~"node-exporter|minio-node"}) > 0.85
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Memoria acima de 85% em {{ $labels.instance }}"
+            description: "Uso de memoria sustentado acima de 85% por 10 minutos."
+        # CPU sustentada alta.
+        - alert: NodeCpuHigh
+          expr: >-
+            avg by (instance) (rate(node_cpu_seconds_total{job=~"node-exporter|minio-node",mode!="idle"}[5m])) > 0.85
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "CPU sustentada alta em {{ $labels.instance }}"
+            description: "Uso de CPU acima de 85% por 15 minutos."

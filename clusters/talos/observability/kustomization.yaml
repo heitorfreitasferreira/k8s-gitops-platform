@@ -20,3 +20,6 @@ configMapGenerator:
     files:
       - dashboards/logs-staging.json
       - dashboards/logs-production.json
+  - name: dashboard-vms-hosts
+    files:
+      - dashboards/vms-hosts.json
