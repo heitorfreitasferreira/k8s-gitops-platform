@@ -23,6 +23,12 @@ spec:
               group_wait: 10s
               group_interval: 1m
               repeat_interval: 1h
+              routes:
+                # O alerta de teste e sempre ativo. Repete so 1x por dia para
+                # nao virar spam no celular.
+                - matchers: ['alertname = "TodoListPipelineTest"']
+                  receiver: ntfy
+                  repeat_interval: 24h
             receivers:
               - name: ntfy
                 webhook_configs:
