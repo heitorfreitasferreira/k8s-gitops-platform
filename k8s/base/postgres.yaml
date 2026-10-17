@@ -38,7 +38,7 @@ spec:
         - name: postgres
           # Imagem com o WAL-G instalado (upstream alpine + binario pinado).
           # Arquivamento continuo de WAL para o MinIO: habilita PITR.
-          image: ghcr.io/heitorfreitasferreira/postgres-walg:16-3.0.7
+          image: ghcr.io/heitorfreitasferreira/postgres-walg@sha256:ae308000b31fbcfecf12d656494c9f8ae7b5775a6f6e88d1a983314a450c6fe3
           # O entrypoint do postgres transforma args que comecam com '-' em
           # `postgres -c ...`. archive_command roda o wal-g dentro do container.
           args:
@@ -124,7 +124,7 @@ spec:
         # direto do volume, sem copiar o banco pela rede. A retencao apaga os
         # base backups alem dos ultimos 7 (os WAL correspondentes vao junto).
         - name: wal-g-backup
-          image: ghcr.io/heitorfreitasferreira/postgres-walg:16-3.0.7
+          image: ghcr.io/heitorfreitasferreira/postgres-walg@sha256:ae308000b31fbcfecf12d656494c9f8ae7b5775a6f6e88d1a983314a450c6fe3
           securityContext:
             runAsNonRoot: true
             runAsUser: 70
