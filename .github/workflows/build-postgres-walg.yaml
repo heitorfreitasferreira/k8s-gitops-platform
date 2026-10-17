@@ -8,6 +8,10 @@ on:
     paths:
       - images/postgres-walg/**
       - .github/workflows/build-postgres-walg.yaml
+  pull_request:
+    paths:
+      - images/postgres-walg/**
+      - .github/workflows/build-postgres-walg.yaml
   workflow_dispatch:
 
 permissions:
