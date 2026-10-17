@@ -35,3 +35,6 @@ configMapGenerator:
   - name: dashboard-metallb
     files:
       - dashboards/metallb.json
+  - name: dashboard-slo-todolist
+    files:
+      - dashboards/slo-todolist.json

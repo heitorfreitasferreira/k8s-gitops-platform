@@ -127,3 +127,47 @@ spec:
           annotations:
             summary: "IP do MetalLB nao anunciado"
             description: "Ha mais IPs alocados no pool do que IPs anunciados pelo speaker."
+    - name: slo.todolist
+      rules:
+        # SLI de disponibilidade: fracao das requisicoes que nao sao 5xx.
+        # SLO: 99% (error budget de 1%).
+        - record: slo:todolist:error_ratio5m
+          expr: >-
+            1 - (sum(rate(flask_http_request_total{namespace=~"todolist-.*",status!~"5.."}[5m]))
+                 / sum(rate(flask_http_request_total{namespace=~"todolist-.*"}[5m])))
+        - record: slo:todolist:error_ratio30m
+          expr: >-
+            1 - (sum(rate(flask_http_request_total{namespace=~"todolist-.*",status!~"5.."}[30m]))
+                 / sum(rate(flask_http_request_total{namespace=~"todolist-.*"}[30m])))
+        - record: slo:todolist:error_ratio1h
+          expr: >-
+            1 - (sum(rate(flask_http_request_total{namespace=~"todolist-.*",status!~"5.."}[1h]))
+                 / sum(rate(flask_http_request_total{namespace=~"todolist-.*"}[1h])))
+        - record: slo:todolist:error_ratio6h
+          expr: >-
+            1 - (sum(rate(flask_http_request_total{namespace=~"todolist-.*",status!~"5.."}[6h]))
+                 / sum(rate(flask_http_request_total{namespace=~"todolist-.*"}[6h])))
+        # Burn-rate multi-janela (Google SRE). O error budget e 1%.
+        # 14.4x em 1h queima 2% do budget. 6x em 6h queima 5%.
+        - alert: TodoListSLOBurnRateFast
+          expr: >-
+            slo:todolist:error_ratio1h > (14.4 * 0.01)
+            and slo:todolist:error_ratio5m > (14.4 * 0.01)
+          for: 2m
+          labels:
+            severity: critical
+            slo: todolist-availability
+          annotations:
+            summary: "Queima rapida do error budget de disponibilidade"
+            description: "Burn-rate acima de 14.4x nas janelas de 1h e 5m. O budget de 1% queima em poucas horas."
+        - alert: TodoListSLOBurnRateMedium
+          expr: >-
+            slo:todolist:error_ratio6h > (6 * 0.01)
+            and slo:todolist:error_ratio30m > (6 * 0.01)
+          for: 5m
+          labels:
+            severity: warning
+            slo: todolist-availability
+          annotations:
+            summary: "Queima media do error budget de disponibilidade"
+            description: "Burn-rate acima de 6x nas janelas de 6h e 30m."
