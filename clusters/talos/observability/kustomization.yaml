@@ -23,3 +23,15 @@ configMapGenerator:
   - name: dashboard-vms-hosts
     files:
       - dashboards/vms-hosts.json
+  - name: dashboard-cilium-hubble
+    files:
+      - dashboards/cilium-hubble.json
+  - name: dashboard-traefik
+    files:
+      - dashboards/traefik.json
+  - name: dashboard-argocd
+    files:
+      - dashboards/argocd.json
+  - name: dashboard-metallb
+    files:
+      - dashboards/metallb.json

@@ -69,12 +69,31 @@ locals {
           - SYS_RESOURCE
     operator:
       replicas: 1
+      prometheus:
+        enabled: true
+        serviceMonitor:
+          enabled: true
+    prometheus:
+      enabled: true
+      serviceMonitor:
+        enabled: true
     hubble:
       enabled: true
       relay:
         enabled: true
       ui:
         enabled: false
+      metrics:
+        # Metricas de fluxo e de drops para o dashboard e o alerta de drop.
+        enabled:
+          - dns:query;ignoreAAAA
+          - drop
+          - tcp
+          - flow
+          - icmp
+          - http
+        serviceMonitor:
+          enabled: true
   YAML
 
   # frrk8s (BGP via FRR) desligado: o pool aqui e anunciado em L2, entao o
@@ -84,6 +103,12 @@ locals {
       enabled: true
     frrk8s:
       enabled: false
+    prometheus:
+      # RBAC para o Prometheus do kube-prometheus-stack raspar o metallb-system.
+      serviceAccount: kube-prometheus-stack-prometheus
+      namespace: observability
+      serviceMonitor:
+        enabled: true
   YAML
 
   traefik_values = <<-YAML
@@ -92,6 +117,15 @@ locals {
     ingressClass:
       enabled: true
       isDefaultClass: true
+    metrics:
+      prometheus:
+        addEntryPointsLabels: true
+        addServicesLabels: true
+        addRoutersLabels: true
+        service:
+          enabled: true
+        serviceMonitor:
+          enabled: true
   YAML
 
   argocd_values = <<-YAML
@@ -103,6 +137,25 @@ locals {
         type: ClusterIP
       ingress:
         enabled: false
+      metrics:
+        enabled: true
+        serviceMonitor:
+          enabled: true
+    controller:
+      metrics:
+        enabled: true
+        serviceMonitor:
+          enabled: true
+    repoServer:
+      metrics:
+        enabled: true
+        serviceMonitor:
+          enabled: true
+    applicationSet:
+      metrics:
+        enabled: true
+        serviceMonitor:
+          enabled: true
   YAML
 
   # Talos usa certificado self-signed no kubelet; sem --kubelet-insecure-tls o

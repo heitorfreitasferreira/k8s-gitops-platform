@@ -76,3 +76,54 @@ spec:
           annotations:
             summary: "CPU sustentada alta em {{ $labels.instance }}"
             description: "Uso de CPU acima de 85% por 15 minutos."
+    - name: cilium
+      rules:
+        # Drops de rede (metricas do Hubble). Limiar baixo o bastante para
+        # pegar problema, alto o bastante para nao disparar com ruido normal.
+        - alert: CiliumDrops
+          expr: sum(rate(hubble_drop_total[5m])) > 1
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Drops de rede no Cilium acima do limiar"
+            description: "Mais de 1 drop por segundo (media de 5m) por 10 minutos."
+    - name: traefik
+      rules:
+        - alert: Traefik5xx
+          expr: sum(rate(traefik_service_requests_total{code=~"5.."}[5m])) > 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Traefik respondendo 5xx"
+            description: "Requisicoes com status 5xx no Traefik por 5 minutos."
+    - name: argocd
+      rules:
+        - alert: ArgoCDAppOutOfSync
+          expr: argocd_app_info{sync_status="OutOfSync"} == 1
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Application fora de sync: {{ $labels.name }}"
+            description: "A Application {{ $labels.name }} esta OutOfSync ha 15 minutos."
+        - alert: ArgoCDAppDegraded
+          expr: argocd_app_info{health_status="Degraded"} == 1
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Application degradada: {{ $labels.name }}"
+            description: "A Application {{ $labels.name }} esta Degraded."
+    - name: metallb
+      rules:
+        # Alerta se houver mais IPs alocados do que IPs efetivamente anunciados.
+        - alert: MetalLBAddressNotAnnounced
+          expr: count(count by (ip) (metallb_speaker_announced)) < sum(metallb_allocator_addresses_in_use_total)
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: "IP do MetalLB nao anunciado"
+            description: "Ha mais IPs alocados no pool do que IPs anunciados pelo speaker."
