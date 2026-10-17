@@ -225,7 +225,8 @@ resource "kubernetes_secret" "grafana_admin" {
 }
 
 resource "random_password" "ntfy_token" {
-  length  = 48
+  # ntfy exige o formato `tk_` + 29 chars (allowedTokenRegex em user/util.go).
+  length  = 29
   special = false
 }
 
@@ -236,9 +237,9 @@ resource "kubernetes_secret" "ntfy_alertmanager" {
   }
   data = {
     # ntfy le NTFY_AUTH_TOKENS no formato "<usuario>:<token>".
-    "auth-tokens" = "alertmanager:${random_password.ntfy_token.result}"
+    "auth-tokens" = "alertmanager:tk_${random_password.ntfy_token.result}"
     # O Alertmanager le so o token, no header Authorization: Bearer.
-    "token" = random_password.ntfy_token.result
+    "token" = "tk_${random_password.ntfy_token.result}"
   }
   type       = "Opaque"
   depends_on = [kubernetes_namespace.workloads]
