@@ -300,3 +300,26 @@ Formato: data + contexto + escolha + descarte. Sem cerimonia de ADR (1 decisao =
   `repeat_interval: 24h` para nao virar spam. Nome proposital diferente de
   `Watchdog`, que o chart roteia para o receiver `null`. Descarte: injetar
   alerta na API do Alertmanager (prova so metade do caminho).
+- 2026-10-17 · Metricas das pecas de plataforma nos Helm values. Contexto: os
+  componentes nao expunham ServiceMonitor, entao o Prometheus nao os raspava.
+  Escolha: ligar metricas e ServiceMonitor no `terraform/platform` para Cilium
+  (agent, operator, Hubble), Traefik (Prometheus com labels de
+  entrypoint/service/router), Argo CD (controller, server, repo-server,
+  applicationSet) e MetalLB (speaker e controller, que exige
+  `prometheus.serviceAccount`/`namespace` para o RBAC do Prometheus). O
+  `serviceMonitorSelectorNilUsesHelmValues: false` ja pega qualquer
+  ServiceMonitor. Descarte: PodMonitor (menos preciso por porta) e scrape por
+  anotacao.
+- 2026-10-17 · etcd do Talos fica fora do scrape por enquanto. Contexto: o
+  endpoint de metricas do etcd do Talos exige client cert (mTLS), entao o
+  ServiceMonitor `kube-etcd` do chart fica sem endpoints. Escolha: kubelet e
+  apiserver seguem raspados, e o alerta de quorum fica para a issue #34.
+  Descarte: apontar o etcd sem cert (nao sobe) e usar metrica de apiserver como
+  proxy de quorum (nao representa o raft).
+- 2026-10-17 · SLO de disponibilidade com burn-rate multi-janela. Contexto:
+  faltava o lado de SLO/SLI. Escolha: SLI de disponibilidade a partir de
+  `flask_http_request_total` (SLO de 99%, error budget de 1%), recording rules
+  do error ratio em 5m/30m/1h/6h e alertas nas janelas rapida (14.4x) e media
+  (6x) do modelo do Google SRE. Descarte: Sloth (mais um operador para gerar o
+  que da para escrever a mao) e a janela lenta (3d/6h) porque a retencao do
+  Prometheus e de 6h.
