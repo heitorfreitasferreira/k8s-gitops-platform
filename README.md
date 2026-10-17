@@ -29,7 +29,7 @@ fonte de verdade.
    Talos em VMs libvirt ── Traefik (LoadBalancer do MetalLB)
         ├── todolist-staging      (auto-sync)
         ├── todolist-production   (sync manual = promocao)
-        └── observability         (Prometheus/Grafana/Loki/Alloy/Tempo/OTel)
+        └── observability         (Prometheus/Grafana/Loki/Alloy/Tempo/OTel/ntfy)
 ```
 
 ## Ambientes e interfaces
@@ -40,6 +40,7 @@ fonte de verdade.
 | production | `todolist-production` | blue | http://prod.local | manual (promocao) |
 | Argo CD UI | argocd | — | http://argocd.local | — |
 | Grafana | observability | — | http://grafana.local | — |
+| ntfy | observability | — | http://ntfy.local | — |
 | Hubble UI | kube-system | — | http://hubble.local | — |
 
 Trocar a cor de um env = 1 linha (`APP_COLOR`) no `configMapGenerator` do
@@ -79,6 +80,12 @@ Stack entregue via Argo CD (Helm charts pinados), tudo em `observability`:
   (SQLAlchemy). O Grafana tem o datasource do Tempo e correlacao nos dois
   sentidos: o log JSON carrega `trace_id` (link para o trace) e o trace
   aponta de volta para o Loki e para o Prometheus.
+- **Alertas**: Alertmanager (ligado no kube-prometheus-stack) com uma rota
+  unica para o ntfy self-hosted (chart `helmforge/ntfy` 1.2.3, topico privado
+  com auth por token). O token vive num Secret montado no pod do Alertmanager.
+  O `PrometheusRule` cobre a disponibilidade da app e traz um alerta de teste
+  sempre ativo para provar o caminho Prometheus -> Alertmanager -> ntfy. A
+  notificacao aparece em `http://ntfy.local` (app ntfy no celular ou na web).
 
 ## O que esta onde
 
@@ -155,7 +162,7 @@ O `make up` exige `terraform` e `kubectl`. O `setup-host.sh` detecta a rede libv
   Service LoadBalancer do Traefik. Consulte-o com `kubectl -n traefik get svc`.
 
 ```text
-<TRAEFIK_IP> staging.local prod.local argocd.local grafana.local hubble.local
+<TRAEFIK_IP> staging.local prod.local argocd.local grafana.local ntfy.local hubble.local
 ```
 
 - Resolução de `.local`: o sufixo pertence ao mDNS. Se o sistema consulta o mDNS antes de `/etc/hosts`, os nomes acima nao resolvem mesmo com a linha presente. Confira com `getent hosts staging.local`. Se sair vazio, veja a ordem das fontes com `grep '^hosts:' /etc/nsswitch.conf` e coloque `files` em primeiro lugar:

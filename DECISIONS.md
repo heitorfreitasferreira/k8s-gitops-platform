@@ -273,3 +273,30 @@ Formato: data + contexto + escolha + descarte. Sem cerimonia de ADR (1 decisao =
   PSA `baseline` barra, entao os DaemonSets ficavam sem pods e travavam o sync
   do kube-prometheus-stack. Escolha: rotulo `privileged` no namespace, igual ao
   do MetalLB. Descarte: desligar o node-exporter (o objetivo e observar as VMs).
+- 2026-10-17 · ntfy self-hosted como canal de alertas. Contexto: o Alertmanager
+  estava desligado por falta de destinatario. Escolha: chart `helmforge/ntfy`
+  1.2.3 (o unico chart Helm mantido para ntfy) em `observability`, Ingress
+  `ntfy.local`, PVC `local-path` de 1Gi. Descarte: conta no ntfy.sh publico
+  (dados fora) e recebedor de e-mail (sem SMTP no cluster).
+- 2026-10-17 · ntfy com `auth-default-access: deny-all` e token no Secret.
+  Contexto: o topico nao pode ser publico. Escolha: usuario `alertmanager`
+  provisionado por `auth-users` (bcrypt) e `auth-access` no topico
+  `todolist-alerts`, mais um token `tk_<29>` gerado no Terraform e lido pelo
+  ntfy via `NTFY_AUTH_TOKENS` (Secret `ntfy-alertmanager`, chave `auth-tokens`).
+  O Alertmanager le a chave `token` do mesmo Secret via `credentials_file`,
+  entao o valor nao entra no config versionado. Descarte: senha em texto no
+  Git (o hash do bcrypt fica no values, a senha nao) e ntfy aberto.
+- 2026-10-17 · Alertmanager com um receiver webhook para o ntfy. Contexto:
+  fechar o ciclo detectar -> avisar. Escolha: `alertmanager.enabled: true` com
+  rota unica para o receiver `ntfy`, `send_resolved: true` e o token lido de
+  arquivo (`http_config.authorization.credentials_file`). O receiver `null` do
+  chart precisa ser redeclarado porque a lista de receivers substitui a default
+  inteira (a rota `Watchdog` do chart continua apontando para ele).
+  `ruleSelectorNilUsesHelmValues: false` faz o Prometheus selecionar os
+  PrometheusRules proprios. Descarte: `stringConfig` (menos legivel que o mapa).
+- 2026-10-17 · Alerta de teste sempre ativo com repeat de 24h. Contexto: provar
+  o caminho Prometheus -> Alertmanager -> ntfy sem depender de uma falha real.
+  Escolha: `TodoListPipelineTest` (`vector(1)`) com rota dedicada e
+  `repeat_interval: 24h` para nao virar spam. Nome proposital diferente de
+  `Watchdog`, que o chart roteia para o receiver `null`. Descarte: injetar
+  alerta na API do Alertmanager (prova so metade do caminho).
