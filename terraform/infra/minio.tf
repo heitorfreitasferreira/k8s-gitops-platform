@@ -73,7 +73,7 @@ resource "libvirt_cloudinit_disk" "minio" {
       # $MINIO_OPTS/$MINIO_VOLUMES na hora de escrever o unit (vazios ali) e o
       # console cairia em porta aleatoria. Com <<'EOF2' a expansao fica para o
       # systemd, que le do EnvironmentFile. (No YAML do cloud-init, \' vira '.)
-      - [sh, -xc, "cat >/etc/default/minio <<\\'EOF2\nMINIO_ROOT_USER=${var.minio_root_user}\nMINIO_ROOT_PASSWORD=${var.minio_root_password}\nMINIO_VOLUMES=/data\nMINIO_OPTS=--console-address :9001\nEOF2"]
+      - [sh, -xc, "cat >/etc/default/minio <<\\'EOF2\nMINIO_ROOT_USER=${var.minio_root_user}\nMINIO_ROOT_PASSWORD=${var.minio_root_password}\nMINIO_VOLUMES=/data\nMINIO_OPTS=--console-address :9001\nMINIO_PROMETHEUS_AUTH_TYPE=public\nEOF2"]
       - [sh, -xc, "cat >/etc/systemd/system/minio.service <<\\'EOF2\n[Unit]\nDescription=MinIO S3 storage\nAfter=network-online.target\nWants=network-online.target\n[Service]\nUser=minio-user\nGroup=minio-user\nEnvironmentFile=/etc/default/minio\nExecStart=/usr/local/bin/minio server $MINIO_OPTS $MINIO_VOLUMES\nRestart=always\nRestartSec=5\n[Install]\nWantedBy=multi-user.target\nEOF2"]
       - [sh, -xc, "systemctl daemon-reload && systemctl enable --now minio.service"]
   EOT
