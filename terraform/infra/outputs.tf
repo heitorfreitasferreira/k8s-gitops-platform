@@ -45,6 +45,12 @@ output "minio_root_user" {
   value       = var.minio_root_user
 }
 
+output "minio_root_password" {
+  description = "Senha root do MinIO. Sensivel: consumida pelo modulo platform para o backup do Postgres."
+  value       = var.minio_root_password
+  sensitive   = true
+}
+
 output "node_ips" {
   description = "Mapa nome -> IP de todos os nos (estaticos na rede NAT)."
   value       = { for node in local.nodes : node.name => node.address }

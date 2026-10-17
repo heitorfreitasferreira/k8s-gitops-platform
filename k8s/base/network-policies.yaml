@@ -118,6 +118,7 @@ spec:
       app: postgres
   policyTypes:
     - Ingress
+    - Egress
   ingress:
     - from:
         - podSelector:
@@ -133,3 +134,24 @@ spec:
       ports:
         - protocol: TCP
           port: 9187
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Backup (WAL-G): arquivamento de WAL e base backup vao para o MinIO,
+    # uma VM fora do cluster. Libera so o IP dela na porta S3.
+    - to:
+        - ipBlock:
+            cidr: 192.168.122.20/32
+      ports:
+        - protocol: TCP
+          port: 9000

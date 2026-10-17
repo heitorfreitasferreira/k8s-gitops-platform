@@ -7,5 +7,6 @@ resources:
   - ingress.yaml
   - cleanup-cronjob.yaml
   - network-policies.yaml
+  - backup-alerts.yaml
 # todolist-config vem de configMapGenerator em cada overlay (nome com hash),
 # para mudanca de conteudo disparar rollout. Ver DECISIONS.
