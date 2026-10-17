@@ -140,6 +140,15 @@ locals {
   })
 }
 
+# Outputs do modulo infra (endpoint e credenciais do MinIO) abastecem o Secret
+# de backup do Postgres. Os dois modulos usam backend local neste projeto.
+data "terraform_remote_state" "infra" {
+  backend = "local"
+  config = {
+    path = "${path.module}/../infra/terraform.tfstate"
+  }
+}
+
 resource "random_password" "app" {
   for_each         = toset(["staging-admin", "staging-session", "staging-cleanup", "production-admin", "production-session", "production-cleanup"])
   length           = 48
@@ -206,6 +215,26 @@ resource "kubernetes_secret" "postgres_credentials" {
     POSTGRES_USER     = "todolist"
     POSTGRES_PASSWORD = random_password.postgres[each.key].result
     POSTGRES_DB       = "todolist"
+  }
+  type       = "Opaque"
+  depends_on = [kubernetes_namespace.workloads]
+}
+
+# Credenciais do MinIO para o WAL-G (backup do Postgres). O prefixo separa os
+# ambientes no bucket unico. Os valores vem dos outputs do modulo infra.
+resource "kubernetes_secret" "minio_backup" {
+  for_each = toset(["staging", "production"])
+  metadata {
+    name      = "minio-backup"
+    namespace = "todolist-${each.key}"
+  }
+  data = {
+    AWS_ACCESS_KEY_ID       = data.terraform_remote_state.infra.outputs.minio_root_user
+    AWS_SECRET_ACCESS_KEY   = data.terraform_remote_state.infra.outputs.minio_root_password
+    AWS_ENDPOINT            = data.terraform_remote_state.infra.outputs.minio_endpoint
+    AWS_REGION              = "us-east-1"
+    AWS_S3_FORCE_PATH_STYLE = "true"
+    WALG_S3_PREFIX          = "s3://${data.terraform_remote_state.infra.outputs.minio_bucket}/${each.key}"
   }
   type       = "Opaque"
   depends_on = [kubernetes_namespace.workloads]
