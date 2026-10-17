@@ -1,0 +1,23 @@
+# Alerta de falha do backup do Postgres. O sidecar wal-g-backup sai com erro
+# quando o `wal-g backup-push` falha; o kubelet reinicia o container e o
+# restart aparece em kube_pod_container_status_restarts_total.
+# O roteamento ate o ntfy e do Alertmanager (ver issue #22).
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: postgres-backup
+  labels:
+    # Selecionado pelo Prometheus do kube-prometheus-stack (ruleSelector).
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: postgres-backup
+      rules:
+        - alert: PostgresBackupFalhando
+          expr: increase(kube_pod_container_status_restarts_total{namespace=~"todolist-.*",container="wal-g-backup"}[1h]) > 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Backup do Postgres falhando em {{ $labels.namespace }}"
+            description: "O sidecar wal-g-backup do pod {{ $labels.pod }} reiniciou. O backup-push para o MinIO provavelmente falhou."
