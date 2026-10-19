@@ -319,7 +319,7 @@ resource "kubernetes_secret" "ntfy_alertmanager" {
   }
   data = {
     # ntfy le NTFY_AUTH_TOKENS no formato "<usuario>:<token>".
-    "auth-tokens" = "alertmanager:tk_${random_password.ntfy_token.result}"
+    "auth-tokens" = "admin:tk_${random_password.ntfy_token.result}"
     # O Alertmanager le so o token, no header Authorization: Bearer.
     "token" = "tk_${random_password.ntfy_token.result}"
   }
