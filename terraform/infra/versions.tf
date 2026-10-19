@@ -14,7 +14,7 @@ terraform {
     # nos nos, faz o bootstrap do etcd e devolve o kubeconfig.
     talos = {
       source  = "siderolabs/talos"
-      version = "0.11.0"
+      version = "0.12.0"
     }
 
     # Cria o bucket no MinIO falando S3 com path-style. Pinado no 5.x, serie
