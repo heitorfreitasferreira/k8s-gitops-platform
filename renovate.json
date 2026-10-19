@@ -26,12 +26,18 @@
       "automerge": false
     },
     {
-      "description": "Agrupa os charts do Argo e as actions num PR por semana",
+      "description": "Agrupa os charts do Argo num PR",
       "matchManagers": [
-        "custom.regex",
+        "custom.regex"
+      ],
+      "groupName": "charts do GitOps"
+    },
+    {
+      "description": "Agrupa as actions num PR. Atualizar arquivos de workflow exige token com escopo workflow (o app do Mend tem)",
+      "matchManagers": [
         "github-actions"
       ],
-      "groupName": "pins do GitOps"
+      "groupName": "actions"
     },
     {
       "description": "Imagens proprias sao geridas pela CI (bump de digest), nao pelo Renovate",
