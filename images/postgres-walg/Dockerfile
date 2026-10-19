@@ -6,7 +6,7 @@ ARG POSTGRES_IMAGE=postgres:16-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45
 # Estagio 1: baixa o binario do WAL-G do release oficial, com checksum pinado.
 # Mesmo padrao do cloud-init do MinIO (download pinado + sha256 verificado).
 # ---------------------------------------------------------------------------
-FROM alpine:3.21@sha256:ce64758a109eb420d874a118f87920e625e12d3634e03b4a5573fd9f6e5d3507 AS fetch
+FROM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 AS fetch
 
 ARG WALG_VERSION=3.0.7
 ARG WALG_SHA256=76d51ed915165d45314bc947300b9d1776adb2d875d857f580a730fd6f66900e
