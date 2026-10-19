@@ -40,6 +40,11 @@ output "minio_bucket" {
   value       = aws_s3_bucket.minio.bucket
 }
 
+output "etcd_metrics_target" {
+  description = "Alvo host:2381 do scrape das metricas do etcd (primeiro control plane)."
+  value       = "${local.controlplane_nodes[0].address}:2381"
+}
+
 output "minio_root_user" {
   description = "Usuario root do MinIO (nao sensivel; a senha sai so por variavel)."
   value       = var.minio_root_user

@@ -127,6 +127,26 @@ spec:
           annotations:
             summary: "IP do MetalLB nao anunciado"
             description: "Ha mais IPs alocados no pool do que IPs anunciados pelo speaker."
+    - name: etcd
+      rules:
+        # Metricas do etcd do Talos (:2381). O endpoint exige o patch do
+        # listen-metrics-urls no machine config do control plane.
+        - alert: EtcdMetricsDown
+          expr: up{job="kube-etcd"} == 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Metricas do etcd indisponiveis"
+            description: "O Prometheus nao consegue raspar o etcd do control plane (:2381)."
+        - alert: EtcdNoLeader
+          expr: max(etcd_server_has_leader) == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "etcd sem lider (risco de quorum)"
+            description: "O etcd do control plane esta sem lider ha 5 minutos, o que indica perda de quorum."
     - name: minio
       rules:
         # MinIO/S3: disponibilidade do servico e do host, espaco e erros.

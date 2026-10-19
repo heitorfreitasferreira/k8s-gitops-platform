@@ -85,3 +85,13 @@ variable "minio_address" {
   type        = string
   default     = ""
 }
+
+variable "etcd_metrics_target" {
+  description = <<-EOT
+    Alvo host:2381 do scrape das metricas do etcd do Talos (primeiro control
+    plane). Vazio desliga o scrape. Vem do output `etcd_metrics_target` do
+    modulo `infra` (o Makefile passa), entao nao fica no Git.
+  EOT
+  type        = string
+  default     = ""
+}

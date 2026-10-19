@@ -66,7 +66,7 @@ spec:
             # lida de um Secret gerado no Terraform porque o IP nao fica no Git.
             additionalScrapeConfigsSecret:
               enabled: true
-              name: prometheus-minio-scrape
+              name: prometheus-extra-scrape
               key: scrape-configs.yaml
             resources:
               # Limits dimensionados por uso real medido (kubectl top):

@@ -220,6 +220,18 @@ resource "talos_machine_configuration_apply" "controlplane" {
       auto       = "off"
       hostname   = local.controlplane_nodes[count.index].name
     }),
+    # Expor as metricas do etcd em :2381 (todas as interfaces, HTTP). O
+    # Prometheus raspa esse endpoint para o alerta de quorum. Sem o patch o etcd
+    # so serve /metrics na porta de cliente (2379, mTLS).
+    yamlencode({
+      cluster = {
+        etcd = {
+          extraArgs = {
+            listen-metrics-urls = "http://0.0.0.0:2381"
+          }
+        }
+      }
+    }),
   ]
   depends_on = [libvirt_domain.controlplane]
 }

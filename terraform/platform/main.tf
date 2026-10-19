@@ -298,32 +298,31 @@ resource "kubernetes_secret" "ntfy_alertmanager" {
   depends_on = [kubernetes_namespace.workloads]
 }
 
-resource "kubernetes_secret" "prometheus_minio_scrape" {
+locals {
+  # Configs de scrape extra do Prometheus (VM do MinIO e etcd do Talos). Os
+  # IPs/hosts vem do modulo `infra`, entao nao ficam no Git. jsonencode produz
+  # YAML valido (JSON e subconjunto de YAML) e evita erro de indentacao.
+  extra_scrape_configs = concat(
+    var.minio_address == "" ? [] : [
+      { job_name = "minio-node", static_configs = [{ targets = ["${var.minio_address}:9100"] }] },
+      { job_name = "minio-cluster", metrics_path = "/minio/v2/metrics/cluster", static_configs = [{ targets = ["${var.minio_address}:9000"] }] },
+      { job_name = "minio-bucket", metrics_path = "/minio/v2/metrics/bucket", static_configs = [{ targets = ["${var.minio_address}:9000"] }] },
+      { job_name = "minio-resource", metrics_path = "/minio/v2/metrics/resource", static_configs = [{ targets = ["${var.minio_address}:9000"] }] },
+    ],
+    var.etcd_metrics_target == "" ? [] : [
+      { job_name = "kube-etcd", scheme = "http", static_configs = [{ targets = ["${var.etcd_metrics_target}"] }] },
+    ],
+  )
+}
+
+resource "kubernetes_secret" "prometheus_extra_scrape" {
   metadata {
-    name      = "prometheus-minio-scrape"
+    name      = "prometheus-extra-scrape"
     namespace = "observability"
   }
   data = {
-    # Config de scrape extra do Prometheus, referenciada pelo
-    # additionalScrapeConfigsSecret do kube-prometheus-stack. O IP do MinIO vem
-    # do modulo `infra`, entao nao fica no Git. Vazio desliga os dois jobs.
-    "scrape-configs.yaml" = var.minio_address == "" ? "[]\n" : <<-EOT
-      - job_name: minio-node
-        static_configs:
-          - targets: ["${var.minio_address}:9100"]
-      - job_name: minio-cluster
-        metrics_path: /minio/v2/metrics/cluster
-        static_configs:
-          - targets: ["${var.minio_address}:9000"]
-      - job_name: minio-bucket
-        metrics_path: /minio/v2/metrics/bucket
-        static_configs:
-          - targets: ["${var.minio_address}:9000"]
-      - job_name: minio-resource
-        metrics_path: /minio/v2/metrics/resource
-        static_configs:
-          - targets: ["${var.minio_address}:9000"]
-    EOT
+    # Referenciado pelo additionalScrapeConfigsSecret do kube-prometheus-stack.
+    "scrape-configs.yaml" = jsonencode(local.extra_scrape_configs)
   }
   type       = "Opaque"
   depends_on = [kubernetes_namespace.workloads]
@@ -695,7 +694,7 @@ resource "kubectl_manifest" "argocd_applications" {
     kubernetes_secret.postgres_credentials,
     kubernetes_secret.grafana_admin,
     kubernetes_secret.ntfy_alertmanager,
-    kubernetes_secret.prometheus_minio_scrape,
+    kubernetes_secret.prometheus_extra_scrape,
   ]
 }
 
