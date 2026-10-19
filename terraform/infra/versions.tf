@@ -7,7 +7,7 @@ terraform {
     # (blocos aninhados) e este modulo segue o schema estavel conhecido.
     libvirt = {
       source  = "dmacvicar/libvirt"
-      version = "0.8.3"
+      version = "0.9.9"
     }
 
     # Provider oficial da Sidero: gera os secrets, a config por role, aplica
