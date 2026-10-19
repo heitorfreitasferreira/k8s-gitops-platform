@@ -6,7 +6,7 @@
     ":semanticCommits"
   ],
   "timezone": "America/Sao_Paulo",
-  "prConcurrentLimit": 5,
+  "prConcurrentLimit": 10,
   "packageRules": [
     {
       "description": "Automerge de patch e digest quando o CI estiver verde (o Renovate so mergeia com os checks do PR verdes)",
