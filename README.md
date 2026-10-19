@@ -100,6 +100,9 @@ Stack entregue via Argo CD (Helm charts pinados), tudo em `observability`:
   erros, capacidade) e alertas `MinIODown`, `MinIOStorageHigh` e
   `MinIOErrors`. A VM do MinIO entra tambem no dashboard `VMs / Hosts` e nos
   alertas de node.
+- **etcd do Talos**: exposto em `:2381` por um patch do machine config do
+  control plane e raspado pelo Prometheus (`kube-etcd`). Alertas de quorum
+  (`EtcdNoLeader`) e de scrape indisponivel (`EtcdMetricsDown`).
 
 ## O que esta onde
 

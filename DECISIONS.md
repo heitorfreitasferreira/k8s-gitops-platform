@@ -332,3 +332,12 @@ Formato: data + contexto + escolha + descarte. Sem cerimonia de ADR (1 decisao =
   modulo `infra` (passado pelo Makefile), entao nao fica no Git. Descarte:
   token JWT do MinIO (expira e exige `mc`) e ServiceMonitor (nao cobre alvo
   fora do cluster).
+- 2026-10-19 · Metricas do etcd do Talos. Contexto: o etcd do Talos so serve
+  `/metrics` na porta de cliente (2379, mTLS), entao o ServiceMonitor `kube-etcd`
+  do chart ficava sem alvo. Escolha: patch do machine config do control plane
+  com `cluster.etcd.extraArgs.listen-metrics-urls: http://0.0.0.0:2381` (HTTP,
+  sem auth, so na rede NAT local) e scrape por `additionalScrapeConfigs`, com o
+  alvo vindo do modulo `infra`. O patch exige reboot do node. Descarte: montar
+  os certs do etcd (`/system/secrets/etcd`) no Prometheus (mais pecas sensiveis
+  para um cluster local) e usar a metrica do apiserver como proxy de quorum
+  (nao representa o raft).
