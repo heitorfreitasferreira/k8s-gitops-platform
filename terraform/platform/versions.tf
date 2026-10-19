@@ -6,7 +6,7 @@ terraform {
     # Argo CD e metrics-server) a partir dos charts oficiais pinados.
     helm = {
       source  = "hashicorp/helm"
-      version = "3.1.2"
+      version = "3.3.0"
     }
 
     # kubectl: aplica os CRs do MetalLB (IPAddressPool e L2Advertisement), que
