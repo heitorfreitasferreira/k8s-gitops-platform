@@ -28,6 +28,12 @@ kubectl -n todolist-staging get pods -l app=todolist -w
 As credenciais do login vem do Secret `todolist-auth`, o mesmo que a app usa.
 O alvo `http://todolist` e o Service no namespace `todolist-staging`.
 
+O namespace tem Pod Security `restricted` e `default-deny` de rede (issue #24),
+entao o `job.yaml` traz o `securityContext` restricted (nao-root, seccomp
+RuntimeDefault, sem escalar privilegio, capabilities drop ALL) e o
+`network-policy.yaml` libera o k6 para a app na 5000 e o DNS. Sem isso o pod e
+rejeitado pelo PSA e as requisicoes dariam timeout.
+
 ## Evidencia
 
 Durante a rampa (30s -> 20 VUs, 2 min -> 60 VUs), capture:

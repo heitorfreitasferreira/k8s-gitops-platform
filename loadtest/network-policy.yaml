@@ -1,0 +1,53 @@
+# NetworkPolicies do loadtest. O namespace tem `default-deny` e a app so aceita
+# ingress das fontes listadas em k8s/base/network-policies.yaml, entao o k6
+# precisa destas duas politicas (aditivas) para falar com o Service `todolist`.
+# Vem junto com o loadtest porque o teste e manual, fora do Argo.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: loadtest-egress
+spec:
+  podSelector:
+    matchLabels:
+      app: loadtest
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: todolist
+      ports:
+        - protocol: TCP
+          port: 5000
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: todolist-loadtest-ingress
+spec:
+  podSelector:
+    matchLabels:
+      app: todolist
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: loadtest
+      ports:
+        - protocol: TCP
+          port: 5000

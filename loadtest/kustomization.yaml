@@ -3,6 +3,7 @@ kind: Kustomization
 namespace: todolist-staging
 resources:
   - job.yaml
+  - network-policy.yaml
 configMapGenerator:
   - name: loadtest-script
     files:

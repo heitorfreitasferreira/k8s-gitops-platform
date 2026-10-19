@@ -12,7 +12,7 @@ fonte de verdade.
 | Provisionamento | Cluster Talos em VMs libvirt pelo Terraform; Cilium, MetalLB, Traefik, Argo CD e secrets pela camada platform. O Terraform registra o ApplicationSet do Argo CD. |
 | Deploy continuo | `git push` no repo da app -> CI (test + build GHCR) -> bump de digest no overlay -> Argo CD sincroniza. Sem passo manual. |
 | Acesso externo | Ingress Traefik pelo IP LoadBalancer do MetalLB, por host local. |
-| Escalabilidade e resiliencia | 2 replicas + HPA (2..5) + PDB + probes separadas (liveness `/livez`, readiness `/healthz`) + rolling update `maxUnavailable: 0` + requests/limits. |
+| Escalabilidade e resiliencia | 2 replicas + HPA (2..5) + PDB + probes separadas (liveness `/livez`, readiness `/healthz`) + rolling update `maxUnavailable: 0` + requests/limits. Prova do 2 -> 5 sob carga em `docs/loadtest-hpa.txt`. |
 | Documentacao | Este README, `DECISIONS.md` (escolhas e descartes) e `docs/` (logs e screenshots de execucoes). |
 
 ## Arquitetura
@@ -115,7 +115,7 @@ Stack entregue via Argo CD (Helm charts pinados), tudo em `observability`:
 | `../todolist-app/.github/workflows/` | CI por branch (staging->overlay staging, production->production) |
 | `terraform/infra/` | VMs Talos em libvirt + MinIO S3 externo (state local) |
 | `terraform/platform/` | plataforma, namespaces e secrets Kubernetes; workloads seguem no Argo CD |
-| `loadtest/` | teste de carga k6 como Job (prova do HPA) |
+| `loadtest/` | teste de carga k6 como Job (prova do HPA), com o `securityContext` restricted e as NetworkPolicies do loadtest |
 | `docs/` | logs, dumps e prints de navegador |
 
 ## Fluxo de branches (GitLab Flow, no repo da app)

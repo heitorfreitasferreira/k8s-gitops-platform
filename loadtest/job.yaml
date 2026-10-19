@@ -14,10 +14,21 @@ spec:
         app: loadtest
     spec:
       restartPolicy: Never
+      # PSA restricted no namespace: o pod precisa rodar como nao-root, com
+      # seccomp default e sem escalar privilegio (ver #24).
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 12345
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: k6
           # k6 pinado por tag; em producao, pinar por digest.
           image: grafana/k6:0.55.0
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
           args: ["run", "/scripts/loadtest.js"]
           env:
             # Alvo: Service 'todolist' no mesmo namespace. Sem passar pelo Ingress.

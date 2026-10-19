@@ -1,0 +1,64 @@
+Teste de carga e prova do HPA (issue #26)
+==========================================
+
+Como rodar: `kubectl apply -k loadtest/`. O k6 roda como Job (grafana/k6),
+com rampa 1 -> 20 -> 60 VUs em ~3 min, apontando para o Service `todolist` no
+namespace `todolist-staging`. Credenciais do login vem do Secret `todolist-auth`.
+
+O namespace tem Pod Security `restricted` e `default-deny` de rede (issue #24),
+entao o loadtest traz o `securityContext` restricted e as duas NetworkPolicies
+(`loadtest-egress` e `todolist-loadtest-ingress`) que liberam o k6 -> app e DNS.
+
+Linha do tempo (amostra de 11 em 11s): `hpa=current/desired cpu=media(%) pods=n|k6`
+------------------------------------------------------------------------------
+11:16:10 hpa=2/2 cpu=76  app_pods=2 k6=Running
+11:16:22 hpa=2/2 cpu=62  app_pods=2 k6=Running
+11:16:33 hpa=2/4 cpu=200 app_pods=4 k6=Running   <- HPA sobe para 4
+11:16:44 hpa=2/4 cpu=351 app_pods=4 k6=Running
+11:16:56 hpa=2/4 cpu=351 app_pods=3 k6=Running
+11:17:07 hpa=2/4 cpu=389 app_pods=5 k6=Running
+11:17:19 hpa=2/4 cpu=389 app_pods=3 k6=Running
+11:17:31 hpa=2/4 cpu=467 app_pods=2 k6=Running
+11:17:44 hpa=2/4 cpu=209 app_pods=4 k6=Running
+11:17:55 hpa=4/5 cpu=276 app_pods=5 k6=Running   <- replica atual 4, alvo 5
+11:18:06 hpa=5/5 cpu=292 app_pods=5 k6=Running   <- 5 replicas (maximo)
+11:18:17 hpa=5/5 cpu=292 app_pods=5 k6=Running
+11:18:38 hpa=5/5 cpu=292 app_pods=5 k6=Error     <- rampa terminou (threshold)
+11:18:49 hpa=5/5 cpu=292 app_pods=5 k6=Error
+11:19:04 hpa=5/5 cpu=292 app_pods=2 k6=Error
+11:19:16 hpa=2/2 cpu=3   app_pods=2 k6=Error     <- volta para 2 replicas
+11:19:28 hpa=2/2 cpu=3   app_pods=2 k6=Error
+11:19:39 hpa=2/2 cpu=3   app_pods=2 k6=Error
+11:19:50 hpa=2/2 cpu=3   app_pods=2 k6=Error
+11:20:03 hpa=2/2 cpu=3   app_pods=2 k6=Error
+11:20:14 hpa=2/2 cpu=3   app_pods=2 k6=Error
+11:20:31 hpa=2/2 cpu=2   app_pods=2 k6=Error
+11:20:42 hpa=2/2 cpu=2   app_pods=2 k6=Error
+11:20:53 hpa=2/2 cpu=2   app_pods=2 k6=Error
+------------------------------------------------------------------------------
+
+Eventos do HPA (`kubectl -n todolist-staging describe hpa todolist`)
+------------------------------------------------------------------------------
+  Normal  SuccessfulRescale  x5 over 4m45s  horizontal-pod-autoscaler
+          New size: 4; reason: cpu resource utilization (percentage of request) above target
+  Normal  SuccessfulRescale  3m23s         horizontal-pod-autoscaler
+          New size: 5; reason: cpu resource utilization (percentage of request) above target
+------------------------------------------------------------------------------
+
+Resumo do k6
+------------------------------------------------------------------------------
+  http_reqs...............: 6606 (36.25/s)
+  iteration_duration......: avg=2.8s p(95)=7.01s max=15.35s
+  thresholds..............: http_req_duration cruzado (p95 > 800ms) sob 60 VUs
+  level=error msg="thresholds on metrics 'http_req_duration' have been crossed"
+------------------------------------------------------------------------------
+
+Leitura
+-------
+Em idle a app fica em 2 replicas e CPU ~2-3% do request. Na rampa a CPU passa
+de 70% do request, o HPA sobe para 4 e depois para 5 (maximo). Quando a rampa
+termina, a CPU volta a ~2% e o HPA reduz de volta para 2 (minimo).
+
+O k6 saiu com erro por causa do threshold de latencia (p95 < 800ms), nao por
+falha de execucao: sob 60 VUs a app satura e a latencia sobe. Isso e esperado
+para uma app pequena e e justamente o que faz o HPA reagir.
