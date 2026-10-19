@@ -28,5 +28,5 @@ configMapGenerator:
       - OTEL_RESOURCE_ATTRIBUTES=service.namespace=todolist,deployment.environment=staging
 images:
   - name: ghcr.io/heitorfreitasferreira/todolist-app
-    newTag: 2b929bd0a3ce48ae3c42cfbc90bb3b5192fa27de
-    digest: sha256:123c71b120aaca4c906af348f85f36b2dadff79faac1f6ab1858d42ce2a1cf19
+    newTag: 565796f83c2d943d4493c979f55e6502c315f5ed
+    digest: sha256:2b30b8e689c61125c12ebc1ac44b8d7526468edc7d0731ba4eba6e676eaeea02
