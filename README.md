@@ -93,6 +93,13 @@ Stack entregue via Argo CD (Helm charts pinados), tudo em `observability`:
 - **SLO**: SLI de disponibilidade da app (SLO de 99%), recording rules do error
   ratio em 5m/30m/1h/6h, alertas multi-janela de burn-rate e dashboard de error
   budget.
+- **MinIO/S3 (VM fora do cluster)**: `node_exporter` e metricas do MinIO
+  publicas, instalados pelo cloud-init da VM. O Prometheus raspa os dois
+  endpoints por `additionalScrapeConfigs`, com o IP vindo do modulo `infra`
+  (nao fica no Git). Dashboard `MinIO / S3` (uso por bucket, requisicoes,
+  erros, capacidade) e alertas `MinIODown`, `MinIOStorageHigh` e
+  `MinIOErrors`. A VM do MinIO entra tambem no dashboard `VMs / Hosts` e nos
+  alertas de node.
 
 ## O que esta onde
 

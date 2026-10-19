@@ -323,3 +323,12 @@ Formato: data + contexto + escolha + descarte. Sem cerimonia de ADR (1 decisao =
   (6x) do modelo do Google SRE. Descarte: Sloth (mais um operador para gerar o
   que da para escrever a mao) e a janela lenta (3d/6h) porque a retencao do
   Prometheus e de 6h.
+- 2026-10-19 · Metricas da VM do MinIO pela rede, com o IP fora do Git.
+  Contexto: a VM do MinIO e fora do cluster e o endpoint de metricas exige auth
+  (403). Escolha: o cloud-init instala `prometheus-node-exporter` e liga
+  `MINIO_PROMETHEUS_AUTH_TYPE=public`, e o Prometheus raspa os quatro endpoints
+  (node, cluster, bucket, resource) por `additionalScrapeConfigs` a partir de
+  um Secret criado no `terraform/platform`. O IP vem do output `minio_ip` do
+  modulo `infra` (passado pelo Makefile), entao nao fica no Git. Descarte:
+  token JWT do MinIO (expira e exige `mc`) e ServiceMonitor (nao cobre alvo
+  fora do cluster).
