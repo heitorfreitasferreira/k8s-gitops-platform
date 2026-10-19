@@ -11,7 +11,7 @@ spec:
   source:
     repoURL: https://repo.helmforge.dev
     chart: ntfy
-    targetRevision: 1.2.3
+    targetRevision: 1.6.2
     helm:
       releaseName: ntfy
       values: |
