@@ -86,6 +86,8 @@ Stack entregue via Argo CD (Helm charts pinados), tudo em `observability`:
   O `PrometheusRule` cobre a disponibilidade da app e traz um alerta de teste
   sempre ativo para provar o caminho Prometheus -> Alertmanager -> ntfy. A
   notificacao aparece em `http://ntfy.local` (app ntfy no celular ou na web).
+  Login web: usuario `admin` com a senha de dev `throwaway-not-used`, ou o
+  token `tk_<29>` do Secret `ntfy-alertmanager` como `Authorization: Bearer`.
 - **Pecas de plataforma**: Cilium/Hubble, Traefik, Argo CD e MetalLB com
   metricas e ServiceMonitors ligados nos Helm values do `terraform/platform`,
   dashboards proprios e alertas (drops do Cilium, 5xx do Traefik, app fora de

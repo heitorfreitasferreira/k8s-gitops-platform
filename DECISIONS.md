@@ -279,13 +279,14 @@ Formato: data + contexto + escolha + descarte. Sem cerimonia de ADR (1 decisao =
   `ntfy.local`, PVC `local-path` de 1Gi. Descarte: conta no ntfy.sh publico
   (dados fora) e recebedor de e-mail (sem SMTP no cluster).
 - 2026-10-17 · ntfy com `auth-default-access: deny-all` e token no Secret.
-  Contexto: o topico nao pode ser publico. Escolha: usuario `alertmanager`
+  Contexto: o topico nao pode ser publico. Escolha: usuario `admin`
   provisionado por `auth-users` (bcrypt) e `auth-access` no topico
   `todolist-alerts`, mais um token `tk_<29>` gerado no Terraform e lido pelo
   ntfy via `NTFY_AUTH_TOKENS` (Secret `ntfy-alertmanager`, chave `auth-tokens`).
   O Alertmanager le a chave `token` do mesmo Secret via `credentials_file`,
-  entao o valor nao entra no config versionado. Descarte: senha em texto no
-  Git (o hash do bcrypt fica no values, a senha nao) e ntfy aberto.
+  entao o valor nao entra no config versionado. O login web usa `admin` com a
+  senha de dev `throwaway-not-used` (o hash do bcrypt fica no values, a senha
+  nao). Descarte: senha em texto no Git e ntfy aberto.
 - 2026-10-17 · Alertmanager com um receiver webhook para o ntfy. Contexto:
   fechar o ciclo detectar -> avisar. Escolha: `alertmanager.enabled: true` com
   rota unica para o receiver `ntfy`, `send_resolved: true` e o token lido de
