@@ -298,6 +298,37 @@ resource "kubernetes_secret" "ntfy_alertmanager" {
   depends_on = [kubernetes_namespace.workloads]
 }
 
+resource "kubernetes_secret" "prometheus_minio_scrape" {
+  metadata {
+    name      = "prometheus-minio-scrape"
+    namespace = "observability"
+  }
+  data = {
+    # Config de scrape extra do Prometheus, referenciada pelo
+    # additionalScrapeConfigsSecret do kube-prometheus-stack. O IP do MinIO vem
+    # do modulo `infra`, entao nao fica no Git. Vazio desliga os dois jobs.
+    "scrape-configs.yaml" = var.minio_address == "" ? "[]\n" : <<-EOT
+      - job_name: minio-node
+        static_configs:
+          - targets: ["${var.minio_address}:9100"]
+      - job_name: minio-cluster
+        metrics_path: /minio/v2/metrics/cluster
+        static_configs:
+          - targets: ["${var.minio_address}:9000"]
+      - job_name: minio-bucket
+        metrics_path: /minio/v2/metrics/bucket
+        static_configs:
+          - targets: ["${var.minio_address}:9000"]
+      - job_name: minio-resource
+        metrics_path: /minio/v2/metrics/resource
+        static_configs:
+          - targets: ["${var.minio_address}:9000"]
+    EOT
+  }
+  type       = "Opaque"
+  depends_on = [kubernetes_namespace.workloads]
+}
+
 resource "kubectl_manifest" "local_path_namespace" {
   yaml_body = yamlencode({
     apiVersion = "v1"
@@ -664,6 +695,7 @@ resource "kubectl_manifest" "argocd_applications" {
     kubernetes_secret.postgres_credentials,
     kubernetes_secret.grafana_admin,
     kubernetes_secret.ntfy_alertmanager,
+    kubernetes_secret.prometheus_minio_scrape,
   ]
 }
 

@@ -127,6 +127,33 @@ spec:
           annotations:
             summary: "IP do MetalLB nao anunciado"
             description: "Ha mais IPs alocados no pool do que IPs anunciados pelo speaker."
+    - name: minio
+      rules:
+        # MinIO/S3: disponibilidade do servico e do host, espaco e erros.
+        - alert: MinIODown
+          expr: up{job=~"minio-.*"} == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "MinIO fora do ar ({{ $labels.job }})"
+            description: "Um dos endpoints do MinIO ({{ $labels.job }}) parou de responder ao scrape."
+        - alert: MinIOStorageHigh
+          expr: (minio_cluster_capacity_usable_free_bytes / minio_cluster_capacity_usable_total_bytes) < 0.2
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Espaco do MinIO abaixo de 20%"
+            description: "O espaco utilizavel livre do MinIO caiu abaixo de 20%."
+        - alert: MinIOErrors
+          expr: sum(rate(minio_s3_requests_errors_total[5m])) > 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Erros nas requisicoes S3 do MinIO"
+            description: "Requisicoes S3 com erro nos ultimos 5 minutos."
     - name: slo.todolist
       rules:
         # SLI de disponibilidade: fracao das requisicoes que nao sao 5xx.

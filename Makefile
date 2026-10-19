@@ -16,7 +16,7 @@ infra:
 
 platform:
 	terraform -chdir=$(PLATFORM) init
-	terraform -chdir=$(PLATFORM) apply
+	terraform -chdir=$(PLATFORM) apply -var="minio_address=$$(terraform -chdir=$(INFRA) output -raw minio_ip)"
 
 down: destroy-platform destroy-infra
 

@@ -74,3 +74,14 @@ variable "argocd_hostname" {
   type        = string
   default     = "argocd.local"
 }
+
+variable "minio_address" {
+  description = <<-EOT
+    IP da VM do MinIO na rede NAT do libvirt, para o Prometheus raspar o
+    node_exporter (:9100) e as metricas do MinIO (:9000). Vazio desliga os
+    scrapes. O valor vem do output `minio_ip` do modulo `infra`, passado pelo
+    Makefile, entao nao fica no Git.
+  EOT
+  type        = string
+  default     = ""
+}

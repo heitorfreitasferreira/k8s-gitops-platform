@@ -62,6 +62,12 @@ spec:
             podMonitorSelectorNilUsesHelmValues: false
             ruleSelectorNilUsesHelmValues: false
             ruleNamespaceSelector: {}
+            # Config de scrape extra (node_exporter e metricas da VM do MinIO),
+            # lida de um Secret gerado no Terraform porque o IP nao fica no Git.
+            additionalScrapeConfigsSecret:
+              enabled: true
+              name: prometheus-minio-scrape
+              key: scrape-configs.yaml
             resources:
               # Limits dimensionados por uso real medido (kubectl top):
               # Prometheus ~850Mi, Grafana ~750Mi em regime. ~1.8x de folga.

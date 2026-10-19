@@ -38,3 +38,6 @@ configMapGenerator:
   - name: dashboard-slo-todolist
     files:
       - dashboards/slo-todolist.json
+  - name: dashboard-minio
+    files:
+      - dashboards/minio.json
