@@ -300,19 +300,20 @@ resource "kubernetes_secret" "ntfy_alertmanager" {
 
 locals {
   # Configs de scrape extra do Prometheus (VM do MinIO e etcd do Talos). Os
-  # IPs/hosts vem do modulo `infra`, entao nao ficam no Git. jsonencode produz
-  # YAML valido (JSON e subconjunto de YAML) e evita erro de indentacao.
-  extra_scrape_configs = concat(
+  # IPs/hosts vem do modulo `infra`, entao nao ficam no Git. Cada job vira uma
+  # string JSON e o conjunto vira um array JSON (JSON e YAML valido).
+  extra_scrape_jobs = concat(
     var.minio_address == "" ? [] : [
-      { job_name = "minio-node", static_configs = [{ targets = ["${var.minio_address}:9100"] }] },
-      { job_name = "minio-cluster", metrics_path = "/minio/v2/metrics/cluster", static_configs = [{ targets = ["${var.minio_address}:9000"] }] },
-      { job_name = "minio-bucket", metrics_path = "/minio/v2/metrics/bucket", static_configs = [{ targets = ["${var.minio_address}:9000"] }] },
-      { job_name = "minio-resource", metrics_path = "/minio/v2/metrics/resource", static_configs = [{ targets = ["${var.minio_address}:9000"] }] },
+      jsonencode({ job_name = "minio-node", static_configs = [{ targets = ["${var.minio_address}:9100"] }] }),
+      jsonencode({ job_name = "minio-cluster", metrics_path = "/minio/v2/metrics/cluster", static_configs = [{ targets = ["${var.minio_address}:9000"] }] }),
+      jsonencode({ job_name = "minio-bucket", metrics_path = "/minio/v2/metrics/bucket", static_configs = [{ targets = ["${var.minio_address}:9000"] }] }),
+      jsonencode({ job_name = "minio-resource", metrics_path = "/minio/v2/metrics/resource", static_configs = [{ targets = ["${var.minio_address}:9000"] }] }),
     ],
     var.etcd_metrics_target == "" ? [] : [
-      { job_name = "kube-etcd", scheme = "http", static_configs = [{ targets = ["${var.etcd_metrics_target}"] }] },
+      jsonencode({ job_name = "kube-etcd", scheme = "http", static_configs = [{ targets = ["${var.etcd_metrics_target}"] }] }),
     ],
   )
+  extra_scrape_configs = "[${join(",", local.extra_scrape_jobs)}]"
 }
 
 resource "kubernetes_secret" "prometheus_extra_scrape" {
@@ -322,7 +323,7 @@ resource "kubernetes_secret" "prometheus_extra_scrape" {
   }
   data = {
     # Referenciado pelo additionalScrapeConfigsSecret do kube-prometheus-stack.
-    "scrape-configs.yaml" = jsonencode(local.extra_scrape_configs)
+    "scrape-configs.yaml" = local.extra_scrape_configs
   }
   type       = "Opaque"
   depends_on = [kubernetes_namespace.workloads]
