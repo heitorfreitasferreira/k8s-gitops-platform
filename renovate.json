@@ -20,6 +20,15 @@
       "description": "Agrupa os charts do Argo e as actions num PR por semana",
       "matchManagers": ["custom.regex", "github-actions"],
       "groupName": "pins do GitOps"
+    },
+    {
+      "description": "Imagens proprias sao geridas pela CI (bump de digest), nao pelo Renovate",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": [
+        "ghcr.io/heitorfreitasferreira/todolist-app",
+        "ghcr.io/heitorfreitasferreira/postgres-walg"
+      ],
+      "enabled": false
     }
   ],
   "customManagers": [
