@@ -36,7 +36,18 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
       containers:
         - name: postgres
-          image: postgres:16-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685
+          # Imagem com o WAL-G instalado (upstream alpine + binario pinado).
+          # Arquivamento continuo de WAL para o MinIO: habilita PITR.
+          image: ghcr.io/heitorfreitasferreira/postgres-walg@sha256:ae308000b31fbcfecf12d656494c9f8ae7b5775a6f6e88d1a983314a450c6fe3
+          # O entrypoint do postgres transforma args que comecam com '-' em
+          # `postgres -c ...`. archive_command roda o wal-g dentro do container.
+          args:
+            - -c
+            - archive_mode=on
+            - -c
+            - archive_command=wal-g wal-push %p
+            - -c
+            - archive_timeout=60
           securityContext:
             runAsNonRoot: true
             # A variante alpine do postgres usa uid 70 (o Debian usa 999).
@@ -59,6 +70,12 @@ spec:
               valueFrom: { secretKeyRef: { name: postgres-credentials, key: POSTGRES_DB } }
             - name: PGDATA
               value: /var/lib/postgresql/data/pgdata
+          # Credenciais do MinIO para o arquivamento de WAL (wal-push).
+          envFrom:
+            - secretRef:
+                name: minio-backup
+          # writeTimeout/readTimeout nao sao aceitos aqui; o wal-g usa o WALG_*
+          # do ambiente (envFrom acima) e o PATH ja tem /usr/local/bin.
           resources:
             requests: { cpu: 100m, memory: 128Mi }
             limits: { cpu: 500m, memory: 512Mi }
@@ -101,6 +118,59 @@ spec:
             requests: { cpu: 10m, memory: 32Mi }
             limits: { cpu: 100m, memory: 128Mi }
           volumeMounts:
+            - name: postgres-tmp
+              mountPath: /tmp
+        # Base backup diario do WAL-G (backup-push) no mesmo pod: le PGDATA
+        # direto do volume, sem copiar o banco pela rede. A retencao apaga os
+        # base backups alem dos ultimos 7 (os WAL correspondentes vao junto).
+        - name: wal-g-backup
+          image: ghcr.io/heitorfreitasferreira/postgres-walg@sha256:ae308000b31fbcfecf12d656494c9f8ae7b5775a6f6e88d1a983314a450c6fe3
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 70
+            runAsGroup: 70
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+            readOnlyRootFilesystem: true
+          env:
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+            - name: PGHOST
+              value: 127.0.0.1
+            - name: PGUSER
+              valueFrom: { secretKeyRef: { name: postgres-credentials, key: POSTGRES_USER } }
+            - name: PGPASSWORD
+              valueFrom: { secretKeyRef: { name: postgres-credentials, key: POSTGRES_PASSWORD } }
+            - name: PGDATABASE
+              valueFrom: { secretKeyRef: { name: postgres-credentials, key: POSTGRES_DB } }
+          envFrom:
+            - secretRef:
+                name: minio-backup
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              until pg_isready -h 127.0.0.1 -q; do sleep 2; done
+              while true; do
+                if wal-g backup-push "$PGDATA"; then
+                  # Retencao: mantem os ultimos 7 base backups FULL.
+                  wal-g delete retain FULL 7 --confirm || true
+                else
+                  # Sai com erro: o pod reinicia o container e o alerta
+                  # PostgresBackupFalhando captura os restarts.
+                  echo "wal-g backup-push falhou" >&2
+                  exit 1
+                fi
+                sleep 86400
+              done
+          resources:
+            requests: { cpu: 10m, memory: 32Mi }
+            limits: { cpu: 200m, memory: 256Mi }
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
             - name: postgres-tmp
               mountPath: /tmp
       volumes:

@@ -323,6 +323,33 @@ Formato: data + contexto + escolha + descarte. Sem cerimonia de ADR (1 decisao =
   (6x) do modelo do Google SRE. Descarte: Sloth (mais um operador para gerar o
   que da para escrever a mao) e a janela lenta (3d/6h) porque a retencao do
   Prometheus e de 6h.
+- 2026-10-17 · Backup do Postgres com WAL-G, nao pg_dump. Contexto: o objetivo e
+  recuperar qualquer instante (PITR) e nao so um dump logico diario. Escolha:
+  o WAL-G roda dentro do pod do Postgres (archive_command `wal-g wal-push %p` +
+  sidecar `wal-g-backup` com `backup-push` a cada 24h), tudo no MinIO.
+  Descarte: CronJob de pg_dump (sem PITR e sem acesso ao PGDATA) e pg_basebackup
+  manual (sem retencao nem WAL continuo).
+- 2026-10-17 · Imagem `postgres-walg` propria com gcompat. Contexto: o WAL-G nao
+  publica imagem oficial e o binario de release e glibc. Escolha: imagem propria
+  a partir do `postgres:16-alpine` pinado por digest, com o binario do WAL-G
+  pinado por versao e sha256, rodando no musl via gcompat. Mantem uid 70 e o
+  layout de PGDATA, sem migrar o volume. Descarte: imagem comunitaria de
+  terceiros (risco de supply chain) e trocar para a base Debian (uid 999
+  brigaria com o volume ja em 70).
+- 2026-10-17 · Credenciais do MinIO via `terraform_remote_state`. Contexto: o
+  modulo `platform` precisa da senha do MinIO que so o modulo `infra` conhece.
+  Escolha: output sensivel `minio_root_password` no infra + `terraform_remote_state`
+  (backend local) no platform, virando o Secret `minio-backup` por ambiente.
+  Descarte: duplicar as credenciais nos tfvars dos dois modulos.
+- 2026-10-17 · Retencao no proprio WAL-G (`delete retain FULL 7`). Contexto: o
+  sidecar roda todo dia e ja fala com o MinIO. Escolha: apagar base backups
+  antigos ali mesmo (os WAL correspondentes vao junto). Descarte: lifecycle do
+  bucket (exige novo apply no infra) e CronJob extra de verificacao.
+- 2026-10-17 · Alerta de backup por restart do sidecar. Contexto: o WAL-G nao
+  expoe metrica propria. Escolha: o sidecar sai com erro quando o `backup-push`
+  falha, o kubelet reinicia e o `PrometheusRule` `PostgresBackupFalhando`
+  observa `kube_pod_container_status_restarts_total`. Descarte: checagem de
+  frescor por CronJob propria (mais um componente) e alerta so por log.
 - 2026-10-19 · Metricas da VM do MinIO pela rede, com o IP fora do Git.
   Contexto: a VM do MinIO e fora do cluster e o endpoint de metricas exige auth
   (403). Escolha: o cloud-init instala `prometheus-node-exporter` e liga
