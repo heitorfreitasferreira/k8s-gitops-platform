@@ -1,0 +1,112 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":dependencyDashboard", ":semanticCommits"],
+  "timezone": "America/Sao_Paulo",
+  "schedule": ["before 6am on monday"],
+  "prConcurrentLimit": 5,
+  "packageRules": [
+    {
+      "description": "Automerge de patch e digest quando o CI estiver verde (o Renovate so mergeia com os checks do PR verdes)",
+      "matchUpdateTypes": ["patch", "digest"],
+      "automerge": true,
+      "automergeType": "pr"
+    },
+    {
+      "description": "Minor e major pedem review manual",
+      "matchUpdateTypes": ["minor", "major"],
+      "automerge": false
+    },
+    {
+      "description": "Agrupa os charts do Argo e as actions num PR por semana",
+      "matchManagers": ["custom.regex", "github-actions"],
+      "groupName": "pins do GitOps"
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Charts do repo grafana nos Applications do Argo (alloy, loki, tempo)",
+      "fileMatch": ["^clusters/talos/argocd/application-(alloy|loki|tempo)\\.yaml$"],
+      "matchStrings": ["chart:\\s*(?<depName>\\S+)\\s+targetRevision:\\s*(?<currentValue>\\S+)"],
+      "datasourceTemplate": "helm",
+      "registryUrlTemplate": "https://grafana.github.io/helm-charts"
+    },
+    {
+      "customType": "regex",
+      "description": "kube-prometheus-stack nos Applications do Argo",
+      "fileMatch": ["^clusters/talos/argocd/application-kube-prometheus-stack\\.yaml$"],
+      "matchStrings": ["chart:\\s*(?<depName>\\S+)\\s+targetRevision:\\s*(?<currentValue>\\S+)"],
+      "datasourceTemplate": "helm",
+      "registryUrlTemplate": "https://prometheus-community.github.io/helm-charts"
+    },
+    {
+      "customType": "regex",
+      "description": "opentelemetry-collector nos Applications do Argo",
+      "fileMatch": ["^clusters/talos/argocd/application-otel-collector\\.yaml$"],
+      "matchStrings": ["chart:\\s*(?<depName>\\S+)\\s+targetRevision:\\s*(?<currentValue>\\S+)"],
+      "datasourceTemplate": "helm",
+      "registryUrlTemplate": "https://open-telemetry.github.io/opentelemetry-helm-charts"
+    },
+    {
+      "customType": "regex",
+      "description": "ntfy nos Applications do Argo",
+      "fileMatch": ["^clusters/talos/argocd/application-ntfy\\.yaml$"],
+      "matchStrings": ["chart:\\s*(?<depName>\\S+)\\s+targetRevision:\\s*(?<currentValue>\\S+)"],
+      "datasourceTemplate": "helm",
+      "registryUrlTemplate": "https://repo.helmforge.dev"
+    },
+    {
+      "customType": "regex",
+      "description": "cilium (Hubble UI) nos Applications do Argo",
+      "fileMatch": ["^clusters/talos/argocd/application-hubble\\.yaml$"],
+      "matchStrings": ["chart:\\s*(?<depName>\\S+)\\s+targetRevision:\\s*(?<currentValue>\\S+)"],
+      "datasourceTemplate": "helm",
+      "registryUrlTemplate": "https://helm.cilium.io"
+    },
+    {
+      "customType": "regex",
+      "description": "Versao do chart do Traefik no terraform/platform",
+      "fileMatch": ["^terraform/platform/variables\\.tf$"],
+      "matchStrings": ["variable \"traefik_version\"\\s*\\{[\\s\\S]*?default\\s*=\\s*\"(?<currentValue>[^\"]+)\""],
+      "depNameTemplate": "traefik",
+      "datasourceTemplate": "helm",
+      "registryUrlTemplate": "https://traefik.github.io/charts"
+    },
+    {
+      "customType": "regex",
+      "description": "Versao do chart do Cilium no terraform/platform",
+      "fileMatch": ["^terraform/platform/variables\\.tf$"],
+      "matchStrings": ["variable \"cilium_version\"\\s*\\{[\\s\\S]*?default\\s*=\\s*\"(?<currentValue>[^\"]+)\""],
+      "depNameTemplate": "cilium",
+      "datasourceTemplate": "helm",
+      "registryUrlTemplate": "https://helm.cilium.io"
+    },
+    {
+      "customType": "regex",
+      "description": "Versao do chart do MetalLB no terraform/platform",
+      "fileMatch": ["^terraform/platform/variables\\.tf$"],
+      "matchStrings": ["variable \"metallb_version\"\\s*\\{[\\s\\S]*?default\\s*=\\s*\"(?<currentValue>[^\"]+)\""],
+      "depNameTemplate": "metallb",
+      "datasourceTemplate": "helm",
+      "registryUrlTemplate": "https://metallb.github.io/metallb"
+    },
+    {
+      "customType": "regex",
+      "description": "Versao do chart do Argo CD no terraform/platform",
+      "fileMatch": ["^terraform/platform/variables\\.tf$"],
+      "matchStrings": ["variable \"argocd_version\"\\s*\\{[\\s\\S]*?default\\s*=\\s*\"(?<currentValue>[^\"]+)\""],
+      "depNameTemplate": "argo-cd",
+      "datasourceTemplate": "helm",
+      "registryUrlTemplate": "https://argoproj.github.io/argo-helm"
+    },
+    {
+      "customType": "regex",
+      "description": "Versao do chart do metrics-server no terraform/platform",
+      "fileMatch": ["^terraform/platform/variables\\.tf$"],
+      "matchStrings": ["variable \"metrics_server_version\"\\s*\\{[\\s\\S]*?default\\s*=\\s*\"(?<currentValue>[^\"]+)\""],
+      "depNameTemplate": "metrics-server",
+      "datasourceTemplate": "helm",
+      "registryUrlTemplate": "https://kubernetes-sigs.github.io/metrics-server"
+    }
+  ]
+}
