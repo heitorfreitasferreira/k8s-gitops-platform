@@ -21,7 +21,7 @@ terraform {
     # estavel conhecida; o 6.x mudou defaults de validacao de endpoint.
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 5.0"
+      version = "~> 6.0"
     }
   }
 
