@@ -14,25 +14,25 @@ variable "kubeconfig_path" {
 variable "cilium_version" {
   description = "Versao do chart do Cilium (chart e app version coincidem)."
   type        = string
-  default     = "1.20.3"
+  default     = "1.20.4"
 }
 
 variable "metallb_version" {
   description = "Versao do chart do MetalLB."
   type        = string
-  default     = "0.16.1"
+  default     = "0.16.2"
 }
 
 variable "traefik_version" {
   description = "Versao do chart do Traefik."
   type        = string
-  default     = "42.0.0"
+  default     = "42.3.1"
 }
 
 variable "argocd_version" {
   description = "Versao do chart do Argo CD."
   type        = string
-  default     = "10.10.5"
+  default     = "10.17.0"
 }
 
 variable "metrics_server_version" {
