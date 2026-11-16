@@ -1,6 +1,6 @@
 # ABOUTME: Postgres 16 (Alpine) com o binario do WAL-G para backup continuo no MinIO.
 # ABOUTME: O binario do WAL-G e glibc, entao roda no Alpine via gcompat.
-ARG POSTGRES_IMAGE=postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
+ARG POSTGRES_IMAGE=postgres:18-alpine@sha256:b6972e1115a4ff8eba5d7f7d19184926d1e16d7d1136ae1e1a7ebf286da0f015
 
 # ---------------------------------------------------------------------------
 # Estagio 1: baixa o binario do WAL-G do release oficial, com checksum pinado.
